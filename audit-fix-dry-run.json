@@ -1,0 +1,1314 @@
+﻿add @rollup/rollup-win32-x64-gnu 4.62.4
+change minimatch 9.0.5 => 9.0.9
+change brace-expansion 2.0.2 => 2.1.4
+change @types/estree 1.0.6 => 1.0.9
+change @rollup/rollup-win32-x64-msvc 4.24.0 => 4.62.4
+change @remix-run/router 1.23.0 => 1.23.3
+change yaml 2.6.0 => 2.9.0
+change vite 5.4.19 => 5.4.21
+change rollup 4.24.0 => 4.62.4
+change react-router-dom 6.30.1 => 6.30.4
+change react-router 6.30.1 => 6.30.4
+change postcss 8.5.6 => 8.5.25
+change picomatch 2.3.1 => 2.3.2
+change nanoid 3.3.11 => 3.3.17
+change minimatch 3.1.2 => 3.1.5
+change lodash 4.17.21 => 4.18.1
+change js-yaml 4.1.0 => 4.3.1
+change glob 10.4.5 => 10.5.0
+change minimatch 9.0.5 => 9.0.9
+change brace-expansion 2.0.2 => 2.1.4
+change flatted 3.3.1 => 3.4.4
+change brace-expansion 1.1.12 => 1.1.18
+change ajv 6.12.6 => 6.15.0
+{
+  "add": [
+    {
+      "name": "@rollup/rollup-win32-x64-gnu",
+      "version": "4.62.4",
+      "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\@rollup\\rollup-win32-x64-gnu"
+    }
+  ],
+  "added": 1,
+  "audited": 501,
+  "change": [
+    {
+      "from": {
+        "name": "minimatch",
+        "version": "9.0.5",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\@typescript-eslint\\typescript-estree\\node_modules\\minimatch"
+      },
+      "to": {
+        "name": "minimatch",
+        "version": "9.0.9",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\@typescript-eslint\\typescript-estree\\node_modules\\minimatch"
+      }
+    },
+    {
+      "from": {
+        "name": "brace-expansion",
+        "version": "2.0.2",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\@typescript-eslint\\typescript-estree\\node_modules\\brace-expansion"
+      },
+      "to": {
+        "name": "brace-expansion",
+        "version": "2.1.4",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\@typescript-eslint\\typescript-estree\\node_modules\\brace-expansion"
+      }
+    },
+    {
+      "from": {
+        "name": "@types/estree",
+        "version": "1.0.6",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\@types\\estree"
+      },
+      "to": {
+        "name": "@types/estree",
+        "version": "1.0.9",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\@types\\estree"
+      }
+    },
+    {
+      "from": {
+        "name": "@rollup/rollup-win32-x64-msvc",
+        "version": "4.24.0",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\@rollup\\rollup-win32-x64-msvc"
+      },
+      "to": {
+        "name": "@rollup/rollup-win32-x64-msvc",
+        "version": "4.62.4",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\@rollup\\rollup-win32-x64-msvc"
+      }
+    },
+    {
+      "from": {
+        "name": "@remix-run/router",
+        "version": "1.23.0",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\@remix-run\\router"
+      },
+      "to": {
+        "name": "@remix-run/router",
+        "version": "1.23.3",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\@remix-run\\router"
+      }
+    },
+    {
+      "from": {
+        "name": "yaml",
+        "version": "2.6.0",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\yaml"
+      },
+      "to": {
+        "name": "yaml",
+        "version": "2.9.0",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\yaml"
+      }
+    },
+    {
+      "from": {
+        "name": "vite",
+        "version": "5.4.19",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\vite"
+      },
+      "to": {
+        "name": "vite",
+        "version": "5.4.21",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\vite"
+      }
+    },
+    {
+      "from": {
+        "name": "rollup",
+        "version": "4.24.0",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\rollup"
+      },
+      "to": {
+        "name": "rollup",
+        "version": "4.62.4",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\rollup"
+      }
+    },
+    {
+      "from": {
+        "name": "react-router-dom",
+        "version": "6.30.1",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\react-router-dom"
+      },
+      "to": {
+        "name": "react-router-dom",
+        "version": "6.30.4",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\react-router-dom"
+      }
+    },
+    {
+      "from": {
+        "name": "react-router",
+        "version": "6.30.1",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\react-router"
+      },
+      "to": {
+        "name": "react-router",
+        "version": "6.30.4",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\react-router"
+      }
+    },
+    {
+      "from": {
+        "name": "postcss",
+        "version": "8.5.6",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\postcss"
+      },
+      "to": {
+        "name": "postcss",
+        "version": "8.5.25",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\postcss"
+      }
+    },
+    {
+      "from": {
+        "name": "picomatch",
+        "version": "2.3.1",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\picomatch"
+      },
+      "to": {
+        "name": "picomatch",
+        "version": "2.3.2",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\picomatch"
+      }
+    },
+    {
+      "from": {
+        "name": "nanoid",
+        "version": "3.3.11",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\nanoid"
+      },
+      "to": {
+        "name": "nanoid",
+        "version": "3.3.17",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\nanoid"
+      }
+    },
+    {
+      "from": {
+        "name": "minimatch",
+        "version": "3.1.2",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\minimatch"
+      },
+      "to": {
+        "name": "minimatch",
+        "version": "3.1.5",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\minimatch"
+      }
+    },
+    {
+      "from": {
+        "name": "lodash",
+        "version": "4.17.21",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\lodash"
+      },
+      "to": {
+        "name": "lodash",
+        "version": "4.18.1",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\lodash"
+      }
+    },
+    {
+      "from": {
+        "name": "js-yaml",
+        "version": "4.1.0",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\js-yaml"
+      },
+      "to": {
+        "name": "js-yaml",
+        "version": "4.3.1",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\js-yaml"
+      }
+    },
+    {
+      "from": {
+        "name": "glob",
+        "version": "10.4.5",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\glob"
+      },
+      "to": {
+        "name": "glob",
+        "version": "10.5.0",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\glob"
+      }
+    },
+    {
+      "from": {
+        "name": "minimatch",
+        "version": "9.0.5",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\glob\\node_modules\\minimatch"
+      },
+      "to": {
+        "name": "minimatch",
+        "version": "9.0.9",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\glob\\node_modules\\minimatch"
+      }
+    },
+    {
+      "from": {
+        "name": "brace-expansion",
+        "version": "2.0.2",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\glob\\node_modules\\brace-expansion"
+      },
+      "to": {
+        "name": "brace-expansion",
+        "version": "2.1.4",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\glob\\node_modules\\brace-expansion"
+      }
+    },
+    {
+      "from": {
+        "name": "flatted",
+        "version": "3.3.1",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\flatted"
+      },
+      "to": {
+        "name": "flatted",
+        "version": "3.4.4",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\flatted"
+      }
+    },
+    {
+      "from": {
+        "name": "brace-expansion",
+        "version": "1.1.12",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\brace-expansion"
+      },
+      "to": {
+        "name": "brace-expansion",
+        "version": "1.1.18",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\brace-expansion"
+      }
+    },
+    {
+      "from": {
+        "name": "ajv",
+        "version": "6.12.6",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\ajv"
+      },
+      "to": {
+        "name": "ajv",
+        "version": "6.15.0",
+        "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\ajv"
+      }
+    }
+  ],
+  "changed": 22,
+  "funding": 100,
+  "remove": [],
+  "removed": 0,
+  "audit": {
+    "auditReportVersion": 2,
+    "vulnerabilities": {
+      "@remix-run/router": {
+        "name": "@remix-run/router",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1112052,
+            "name": "@remix-run/router",
+            "dependency": "@remix-run/router",
+            "title": "React Router vulnerable to XSS via Open Redirects",
+            "url": "https://github.com/advisories/GHSA-2w69-qvjg-hvjx",
+            "severity": "high",
+            "cwe": [
+              "CWE-79"
+            ],
+            "cvss": {
+              "score": 8,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:H/A:N"
+            },
+            "range": "<=1.23.1"
+          },
+          {
+            "source": 1136293,
+            "name": "@remix-run/router",
+            "dependency": "@remix-run/router",
+            "title": "React Router's same-origin redirect with path starting // causes open redirect via protocol-relative URL reinterpretation",
+            "url": "https://github.com/advisories/GHSA-2j2x-hqr9-3h42",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-601"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": ">=1.3.0 <1.23.3"
+          }
+        ],
+        "effects": [
+          "react-router",
+          "react-router-dom"
+        ],
+        "range": "<=1.23.2",
+        "nodes": [
+          ""
+        ],
+        "fixAvailable": true
+      },
+      "ajv": {
+        "name": "ajv",
+        "severity": "moderate",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1113714,
+            "name": "ajv",
+            "dependency": "ajv",
+            "title": "ajv has ReDoS when using `$data` option",
+            "url": "https://github.com/advisories/GHSA-2g4f-4pwh-qvx6",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-400",
+              "CWE-1333"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": "<6.14.0"
+          }
+        ],
+        "effects": [],
+        "range": "<6.14.0",
+        "nodes": [
+          ""
+        ],
+        "fixAvailable": true
+      },
+      "brace-expansion": {
+        "name": "brace-expansion",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1115540,
+            "name": "brace-expansion",
+            "dependency": "brace-expansion",
+            "title": "brace-expansion: Zero-step sequence causes process hang and memory exhaustion",
+            "url": "https://github.com/advisories/GHSA-f886-m6hf-6m8v",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-400"
+            ],
+            "cvss": {
+              "score": 6.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H"
+            },
+            "range": "<1.1.13"
+          },
+          {
+            "source": 1115541,
+            "name": "brace-expansion",
+            "dependency": "brace-expansion",
+            "title": "brace-expansion: Zero-step sequence causes process hang and memory exhaustion",
+            "url": "https://github.com/advisories/GHSA-f886-m6hf-6m8v",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-400"
+            ],
+            "cvss": {
+              "score": 6.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H"
+            },
+            "range": ">=2.0.0 <2.0.3"
+          },
+          {
+            "source": 1123896,
+            "name": "brace-expansion",
+            "dependency": "brace-expansion",
+            "title": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups",
+            "url": "https://github.com/advisories/GHSA-3jxr-9vmj-r5cp",
+            "severity": "high",
+            "cwe": [
+              "CWE-400",
+              "CWE-407"
+            ],
+            "cvss": {
+              "score": 5.3,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+            },
+            "range": ">=2.0.0 <2.1.2"
+          },
+          {
+            "source": 1123897,
+            "name": "brace-expansion",
+            "dependency": "brace-expansion",
+            "title": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups",
+            "url": "https://github.com/advisories/GHSA-3jxr-9vmj-r5cp",
+            "severity": "high",
+            "cwe": [
+              "CWE-400",
+              "CWE-407"
+            ],
+            "cvss": {
+              "score": 5.3,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+            },
+            "range": "<1.1.16"
+          },
+          {
+            "source": 1130588,
+            "name": "brace-expansion",
+            "dependency": "brace-expansion",
+            "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
+            "url": "https://github.com/advisories/GHSA-mh99-v99m-4gvg",
+            "severity": "high",
+            "cwe": [
+              "CWE-400",
+              "CWE-770"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+            },
+            "range": "<1.1.17"
+          },
+          {
+            "source": 1130589,
+            "name": "brace-expansion",
+            "dependency": "brace-expansion",
+            "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
+            "url": "https://github.com/advisories/GHSA-mh99-v99m-4gvg",
+            "severity": "high",
+            "cwe": [
+              "CWE-400",
+              "CWE-770"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+            },
+            "range": ">=2.0.0 <2.1.3"
+          },
+          {
+            "source": 1130736,
+            "name": "brace-expansion",
+            "dependency": "brace-expansion",
+            "title": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation",
+            "url": "https://github.com/advisories/GHSA-rgw5-rvv9-x895",
+            "severity": "high",
+            "cwe": [
+              "CWE-400",
+              "CWE-770"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+            },
+            "range": ">=2.0.0 <2.1.4"
+          },
+          {
+            "source": 1130737,
+            "name": "brace-expansion",
+            "dependency": "brace-expansion",
+            "title": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation",
+            "url": "https://github.com/advisories/GHSA-rgw5-rvv9-x895",
+            "severity": "high",
+            "cwe": [
+              "CWE-400",
+              "CWE-770"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+            },
+            "range": "<1.1.18"
+          }
+        ],
+        "effects": [],
+        "range": "<=1.1.17 || 2.0.0 - 2.1.3",
+        "nodes": [
+          "",
+          "",
+          ""
+        ],
+        "fixAvailable": true
+      },
+      "esbuild": {
+        "name": "esbuild",
+        "severity": "moderate",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1102341,
+            "name": "esbuild",
+            "dependency": "esbuild",
+            "title": "esbuild enables any website to send any requests to the development server and read the response",
+            "url": "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-346"
+            ],
+            "cvss": {
+              "score": 5.3,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:N/A:N"
+            },
+            "range": "<=0.24.2"
+          }
+        ],
+        "effects": [
+          "vite"
+        ],
+        "range": "<=0.24.2",
+        "nodes": [
+          "node_modules/esbuild"
+        ],
+        "fixAvailable": true
+      },
+      "flatted": {
+        "name": "flatted",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1114526,
+            "name": "flatted",
+            "dependency": "flatted",
+            "title": "flatted vulnerable to unbounded recursion DoS in parse() revive phase",
+            "url": "https://github.com/advisories/GHSA-25h7-pfq9-p65f",
+            "severity": "high",
+            "cwe": [
+              "CWE-674"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+            },
+            "range": "<3.4.0"
+          },
+          {
+            "source": 1115357,
+            "name": "flatted",
+            "dependency": "flatted",
+            "title": "Prototype Pollution via parse() in NodeJS flatted",
+            "url": "https://github.com/advisories/GHSA-rf6f-7fwh-wjgh",
+            "severity": "high",
+            "cwe": [
+              "CWE-1321"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": "<=3.4.1"
+          }
+        ],
+        "effects": [],
+        "range": "<=3.4.1",
+        "nodes": [
+          ""
+        ],
+        "fixAvailable": true
+      },
+      "glob": {
+        "name": "glob",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1109842,
+            "name": "glob",
+            "dependency": "glob",
+            "title": "glob CLI: Command injection via -c/--cmd executes matches with shell:true",
+            "url": "https://github.com/advisories/GHSA-5j98-mcp5-4vw2",
+            "severity": "high",
+            "cwe": [
+              "CWE-78"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H"
+            },
+            "range": ">=10.2.0 <10.5.0"
+          }
+        ],
+        "effects": [],
+        "range": "10.2.0 - 10.4.5",
+        "nodes": [
+          ""
+        ],
+        "fixAvailable": true
+      },
+      "js-yaml": {
+        "name": "js-yaml",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1112715,
+            "name": "js-yaml",
+            "dependency": "js-yaml",
+            "title": "js-yaml has prototype pollution in merge (<<)",
+            "url": "https://github.com/advisories/GHSA-mh29-5h37-fv8m",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-1321"
+            ],
+            "cvss": {
+              "score": 5.3,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N"
+            },
+            "range": ">=4.0.0 <4.1.1"
+          },
+          {
+            "source": 1121860,
+            "name": "js-yaml",
+            "dependency": "js-yaml",
+            "title": "JS-YAML: Quadratic-complexity DoS in merge key handling via repeated aliases",
+            "url": "https://github.com/advisories/GHSA-h67p-54hq-rp68",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-407"
+            ],
+            "cvss": {
+              "score": 5.3,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+            },
+            "range": ">=4.0.0 <=4.1.1"
+          },
+          {
+            "source": 1123911,
+            "name": "js-yaml",
+            "dependency": "js-yaml",
+            "title": "js-yaml: YAML merge-key chains can force quadratic CPU consumption",
+            "url": "https://github.com/advisories/GHSA-52cp-r559-cp3m",
+            "severity": "high",
+            "cwe": [
+              "CWE-400",
+              "CWE-407"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+            },
+            "range": ">=4.0.0 <4.3.0"
+          }
+        ],
+        "effects": [],
+        "range": "4.0.0 - 4.2.0",
+        "nodes": [
+          ""
+        ],
+        "fixAvailable": true
+      },
+      "lodash": {
+        "name": "lodash",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1115806,
+            "name": "lodash",
+            "dependency": "lodash",
+            "title": "lodash vulnerable to Code Injection via `_.template` imports key names",
+            "url": "https://github.com/advisories/GHSA-r5fr-rjxr-66jc",
+            "severity": "high",
+            "cwe": [
+              "CWE-94"
+            ],
+            "cvss": {
+              "score": 8.1,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H"
+            },
+            "range": ">=4.0.0 <=4.17.23"
+          },
+          {
+            "source": 1115810,
+            "name": "lodash",
+            "dependency": "lodash",
+            "title": "lodash vulnerable to Prototype Pollution via array path bypass in `_.unset` and `_.omit`",
+            "url": "https://github.com/advisories/GHSA-f23m-r3pf-42rh",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-1321"
+            ],
+            "cvss": {
+              "score": 6.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L"
+            },
+            "range": "<=4.17.23"
+          },
+          {
+            "source": 1120370,
+            "name": "lodash",
+            "dependency": "lodash",
+            "title": "Lodash has Prototype Pollution Vulnerability in `_.unset` and `_.omit` functions",
+            "url": "https://github.com/advisories/GHSA-xxjr-mmjv-4gpg",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-1321"
+            ],
+            "cvss": {
+              "score": 6.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L"
+            },
+            "range": ">=4.0.0 <=4.17.22"
+          }
+        ],
+        "effects": [],
+        "range": "<=4.17.23",
+        "nodes": [
+          ""
+        ],
+        "fixAvailable": true
+      },
+      "minimatch": {
+        "name": "minimatch",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1113459,
+            "name": "minimatch",
+            "dependency": "minimatch",
+            "title": "minimatch has a ReDoS via repeated wildcards with non-matching literal in pattern",
+            "url": "https://github.com/advisories/GHSA-3ppc-4f35-3m26",
+            "severity": "high",
+            "cwe": [
+              "CWE-1333"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": "<3.1.3"
+          },
+          {
+            "source": 1113465,
+            "name": "minimatch",
+            "dependency": "minimatch",
+            "title": "minimatch has a ReDoS via repeated wildcards with non-matching literal in pattern",
+            "url": "https://github.com/advisories/GHSA-3ppc-4f35-3m26",
+            "severity": "high",
+            "cwe": [
+              "CWE-1333"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": ">=9.0.0 <9.0.6"
+          },
+          {
+            "source": 1113538,
+            "name": "minimatch",
+            "dependency": "minimatch",
+            "title": "minimatch has ReDoS: matchOne() combinatorial backtracking via multiple non-adjacent GLOBSTAR segments",
+            "url": "https://github.com/advisories/GHSA-7r86-cg39-jmmj",
+            "severity": "high",
+            "cwe": [
+              "CWE-407"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+            },
+            "range": "<3.1.3"
+          },
+          {
+            "source": 1113544,
+            "name": "minimatch",
+            "dependency": "minimatch",
+            "title": "minimatch has ReDoS: matchOne() combinatorial backtracking via multiple non-adjacent GLOBSTAR segments",
+            "url": "https://github.com/advisories/GHSA-7r86-cg39-jmmj",
+            "severity": "high",
+            "cwe": [
+              "CWE-407"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+            },
+            "range": ">=9.0.0 <9.0.7"
+          },
+          {
+            "source": 1113546,
+            "name": "minimatch",
+            "dependency": "minimatch",
+            "title": "minimatch ReDoS: nested *() extglobs generate catastrophically backtracking regular expressions",
+            "url": "https://github.com/advisories/GHSA-23c5-xmqv-rm74",
+            "severity": "high",
+            "cwe": [
+              "CWE-1333"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+            },
+            "range": "<3.1.4"
+          },
+          {
+            "source": 1113552,
+            "name": "minimatch",
+            "dependency": "minimatch",
+            "title": "minimatch ReDoS: nested *() extglobs generate catastrophically backtracking regular expressions",
+            "url": "https://github.com/advisories/GHSA-23c5-xmqv-rm74",
+            "severity": "high",
+            "cwe": [
+              "CWE-1333"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+            },
+            "range": ">=9.0.0 <9.0.7"
+          }
+        ],
+        "effects": [],
+        "range": "<=3.1.3 || 9.0.0 - 9.0.6",
+        "nodes": [
+          "",
+          "",
+          ""
+        ],
+        "fixAvailable": true
+      },
+      "picomatch": {
+        "name": "picomatch",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1115549,
+            "name": "picomatch",
+            "dependency": "picomatch",
+            "title": "Picomatch: Method Injection in POSIX Character Classes causes incorrect Glob Matching",
+            "url": "https://github.com/advisories/GHSA-3v7f-55p6-f55p",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-1321"
+            ],
+            "cvss": {
+              "score": 5.3,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N"
+            },
+            "range": "<2.3.2"
+          },
+          {
+            "source": 1115552,
+            "name": "picomatch",
+            "dependency": "picomatch",
+            "title": "Picomatch has a ReDoS vulnerability via extglob quantifiers",
+            "url": "https://github.com/advisories/GHSA-c2c7-rcm5-vvqj",
+            "severity": "high",
+            "cwe": [
+              "CWE-1333"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+            },
+            "range": "<2.3.2"
+          }
+        ],
+        "effects": [],
+        "range": "<=2.3.1",
+        "nodes": [
+          ""
+        ],
+        "fixAvailable": true
+      },
+      "postcss": {
+        "name": "postcss",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1117015,
+            "name": "postcss",
+            "dependency": "postcss",
+            "title": "PostCSS has XSS via Unescaped </style> in its CSS Stringify Output",
+            "url": "https://github.com/advisories/GHSA-qx2v-qp2m-jg93",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-79"
+            ],
+            "cvss": {
+              "score": 6.1,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"
+            },
+            "range": "<8.5.10"
+          },
+          {
+            "source": 1124252,
+            "name": "postcss",
+            "dependency": "postcss",
+            "title": "PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments",
+            "url": "https://github.com/advisories/GHSA-6g55-p6wh-862q",
+            "severity": "high",
+            "cwe": [
+              "CWE-22",
+              "CWE-200"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+            },
+            "range": "<=8.5.11"
+          },
+          {
+            "source": 1124288,
+            "name": "postcss",
+            "dependency": "postcss",
+            "title": "PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure",
+            "url": "https://github.com/advisories/GHSA-r28c-9q8g-f849",
+            "severity": "high",
+            "cwe": [
+              "CWE-22"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+            },
+            "range": "<=8.5.17"
+          },
+          {
+            "source": 1130709,
+            "name": "postcss",
+            "dependency": "postcss",
+            "title": "PostCSS: incomplete fix of GHSA-6g55-p6wh-862q ÔÇö attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset",
+            "url": "https://github.com/advisories/GHSA-fxqj-rqcc-2cmp",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-22",
+              "CWE-200"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": "<=8.5.22"
+          }
+        ],
+        "effects": [],
+        "range": "<=8.5.22",
+        "nodes": [
+          ""
+        ],
+        "fixAvailable": true
+      },
+      "react-router": {
+        "name": "react-router",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          "@remix-run/router",
+          {
+            "source": 1112057,
+            "name": "react-router",
+            "dependency": "react-router",
+            "title": "React Router has unexpected external redirect via untrusted paths",
+            "url": "https://github.com/advisories/GHSA-9jcx-v3wj-wh4m",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-601"
+            ],
+            "cvss": {
+              "score": 6.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:N"
+            },
+            "range": ">=6.0.0 <6.30.2"
+          },
+          {
+            "source": 1124268,
+            "name": "react-router",
+            "dependency": "react-router",
+            "title": "React Router: Open redirect via backslash in <Link> and useNavigate (CVE-2025-68470 bypass)",
+            "url": "https://github.com/advisories/GHSA-wrjc-x8rr-h8h6",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-601"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": ">=6.0.0 <7.18.0"
+          },
+          {
+            "source": 1124272,
+            "name": "react-router",
+            "dependency": "react-router",
+            "title": "React Router: Arbitrary Constructor Injection via deserializeErrors() in React Router SSR Hydration",
+            "url": "https://github.com/advisories/GHSA-337j-9hxr-rhxg",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-470"
+            ],
+            "cvss": {
+              "score": 6.1,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"
+            },
+            "range": ">=6.4.0 <7.18.0"
+          },
+          {
+            "source": 1136303,
+            "name": "react-router",
+            "dependency": "react-router",
+            "title": "React Router's same-origin redirect with path starting // causes open redirect via protocol-relative URL reinterpretation",
+            "url": "https://github.com/advisories/GHSA-2j2x-hqr9-3h42",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-601"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": ">=6.7.0 <6.30.4"
+          }
+        ],
+        "effects": [
+          "react-router-dom"
+        ],
+        "range": "6.0.0 - 7.17.0",
+        "nodes": [
+          ""
+        ],
+        "fixAvailable": true
+      },
+      "react-router-dom": {
+        "name": "react-router-dom",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          "@remix-run/router",
+          "react-router"
+        ],
+        "effects": [],
+        "range": "6.0.0-alpha.0 - 6.30.2",
+        "nodes": [
+          ""
+        ],
+        "fixAvailable": true
+      },
+      "rollup": {
+        "name": "rollup",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1113515,
+            "name": "rollup",
+            "dependency": "rollup",
+            "title": "Rollup 4 has Arbitrary File Write via Path Traversal",
+            "url": "https://github.com/advisories/GHSA-mw96-cpmx-2vgc",
+            "severity": "high",
+            "cwe": [
+              "CWE-22"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": ">=4.0.0 <4.59.0"
+          }
+        ],
+        "effects": [],
+        "range": "4.0.0 - 4.58.0",
+        "nodes": [
+          ""
+        ],
+        "fixAvailable": true
+      },
+      "vite": {
+        "name": "vite",
+        "severity": "high",
+        "isDirect": true,
+        "via": [
+          {
+            "source": 1107323,
+            "name": "vite",
+            "dependency": "vite",
+            "title": "Vite middleware may serve files starting with the same name with the public directory",
+            "url": "https://github.com/advisories/GHSA-g4jq-h2w9-997c",
+            "severity": "low",
+            "cwe": [
+              "CWE-22",
+              "CWE-200",
+              "CWE-284"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": "<=5.4.19"
+          },
+          {
+            "source": 1107327,
+            "name": "vite",
+            "dependency": "vite",
+            "title": "Vite's `server.fs` settings were not applied to HTML files",
+            "url": "https://github.com/advisories/GHSA-jqfw-vq24-v9c3",
+            "severity": "low",
+            "cwe": [
+              "CWE-23",
+              "CWE-200",
+              "CWE-284"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": "<=5.4.19"
+          },
+          {
+            "source": 1109131,
+            "name": "vite",
+            "dependency": "vite",
+            "title": "vite allows server.fs.deny bypass via backslash on Windows",
+            "url": "https://github.com/advisories/GHSA-93m4-6634-74q7",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-22"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": ">=5.2.6 <=5.4.20"
+          },
+          {
+            "source": 1116229,
+            "name": "vite",
+            "dependency": "vite",
+            "title": "Vite Vulnerable to Path Traversal in Optimized Deps `.map` Handling",
+            "url": "https://github.com/advisories/GHSA-4w7w-66w2-5vf9",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-22",
+              "CWE-200"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": "<=6.4.1"
+          },
+          {
+            "source": 1120784,
+            "name": "vite",
+            "dependency": "vite",
+            "title": "launch-editor: NTLMv2 hash disclosure via UNC path handling on Windows",
+            "url": "https://github.com/advisories/GHSA-v6wh-96g9-6wx3",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-73",
+              "CWE-522"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": "<=6.4.2"
+          },
+          {
+            "source": 1123525,
+            "name": "vite",
+            "dependency": "vite",
+            "title": "vite: `server.fs.deny` bypass on Windows alternate paths",
+            "url": "https://github.com/advisories/GHSA-fx2h-pf6j-xcff",
+            "severity": "high",
+            "cwe": [
+              "CWE-22",
+              "CWE-200"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+            },
+            "range": "<=6.4.2"
+          },
+          "esbuild"
+        ],
+        "effects": [],
+        "range": "<=6.4.2",
+        "nodes": [
+          "",
+          "node_modules/vite"
+        ],
+        "fixAvailable": true
+      },
+      "yaml": {
+        "name": "yaml",
+        "severity": "moderate",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1115556,
+            "name": "yaml",
+            "dependency": "yaml",
+            "title": "yaml is vulnerable to Stack Overflow via deeply nested YAML collections",
+            "url": "https://github.com/advisories/GHSA-48c2-rrv3-qjmp",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-674"
+            ],
+            "cvss": {
+              "score": 4.3,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L"
+            },
+            "range": ">=2.0.0 <2.8.3"
+          }
+        ],
+        "effects": [],
+        "range": "2.0.0 - 2.8.2",
+        "nodes": [
+          ""
+        ],
+        "fixAvailable": true
+      }
+    },
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 3,
+        "high": 13,
+        "critical": 0,
+        "total": 16
+      },
+      "dependencies": {
+        "prod": 258,
+        "dev": 242,
+        "optional": 7,
+        "peer": 10,
+        "peerOptional": 0,
+        "total": 500
+      }
+    }
+  },
+  "unreviewedScripts": [
+    {
+      "name": "@swc/core",
+      "version": "1.13.2",
+      "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\@swc\\core",
+      "scripts": {
+        "install": "(install scripts present)"
+      }
+    },
+    {
+      "name": "esbuild",
+      "version": "0.21.5",
+      "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\esbuild",
+      "scripts": {
+        "install": "(install scripts present)"
+      }
+    },
+    {
+      "name": "esbuild",
+      "version": "0.25.0",
+      "path": "C:\\Users\\Gabriel Barbosa\\OneDrive\\├ürea de Trabalho\\progress├úo-de-carreira\\node_modules\\lovable-tagger\\node_modules\\esbuild",
+      "scripts": {
+        "install": "(install scripts present)"
+      }
+    }
+  ]
+}

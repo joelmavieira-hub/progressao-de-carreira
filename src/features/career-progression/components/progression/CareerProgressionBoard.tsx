@@ -1,0 +1,91 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, Award, Eye, Target, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { derivarOpcoesDeFiltro, formatarSquadAtual } from "../../domain";
+import {
+  buildCycleColumns, countUniquePromoted, filterProfiles, filterResultsByProfiles, findRecentPromotions,
+  listCompetences, type AnalyticsFilters, type PromotionView,
+} from "../../domain/analytics";
+import type { ColaboradorPerfil, ColaboradorResultado, PerfilComHistorico } from "../../types";
+import { formatarCompetencia, formatarEtapaProgresso } from "@/lib/progression";
+import { CareerFiltersBar } from "../shared/CareerFiltersBar";
+import { ProfileHistoryDialog } from "../shared/ProfileHistoryDialog";
+
+const defaults = (competence: string): AnalyticsFilters => ({ competence, status: "ativos", squad: "todos", position: "todos", seniority: "todos", search: "" });
+
+export function CareerProgressionBoard({ perfis, resultados, perfisComHistorico, focus }: {
+  perfis: ColaboradorPerfil[]; resultados: ColaboradorResultado[]; perfisComHistorico: PerfilComHistorico[]; focus?: "meta3" | "promoted";
+}) {
+  const competences = useMemo(() => listCompetences(resultados), [resultados]);
+  const latest = competences.at(-1) ?? "";
+  const [filters, setFilters] = useState<AnalyticsFilters>(() => defaults(latest));
+  const [selected, setSelected] = useState<PerfilComHistorico | null>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (!filters.competence && latest) setFilters((current) => ({ ...current, competence: latest })); }, [filters.competence, latest]);
+  useEffect(() => {
+    if (!focus || !boardRef.current) return;
+    boardRef.current.querySelector<HTMLElement>(`[data-column="${focus}"]`)?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [focus]);
+
+  const options = useMemo(() => derivarOpcoesDeFiltro(perfis), [perfis]);
+  const filtered = useMemo(() => filterProfiles(perfisComHistorico, filters), [perfisComHistorico, filters]);
+  const filteredResults = useMemo(() => filterResultsByProfiles(resultados, filtered), [resultados, filtered]);
+  const columns = useMemo(() => buildCycleColumns(filtered), [filtered]);
+  const promotions = useMemo(() => findRecentPromotions(filtered, filters.competence), [filtered, filters.competence]);
+  const promotionRows = filteredResults.filter((row) => row.recebeu_promocao && row.competencia === filters.competence);
+
+  return <div className="space-y-5" data-testid="career-progression-board">
+    <CareerFiltersBar filters={filters} competences={[...competences].reverse()} options={options} onChange={setFilters} onClear={() => setFilters(defaults(latest))} showSearch />
+    <OperationalSummary promoted={countUniquePromoted(promotionRows)} promotionRecords={promotionRows.length} near={columns.meta3.length} monitored={filtered.length} />
+    {filtered.length === 0 ? <div role="status" className="rounded-2xl border border-dashed bg-card p-10 text-center"><p className="font-semibold">Nenhum colaborador corresponde aos filtros.</p>
+      <Button variant="outline" className="mt-4" onClick={() => setFilters(defaults(latest))}>Limpar filtros</Button></div> :
+      <div ref={boardRef} className="mx-auto w-full pb-3" aria-label="Quadro de progressão"><div data-testid="progression-columns" className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <CycleColumn title="0/3" description="Nenhuma Meta 3 no ciclo atual" items={columns.meta1} progress={0} competence={filters.competence} onOpen={setSelected} />
+        <CycleColumn title="1/3" description="Uma Meta 3 no ciclo atual" items={columns.meta2} progress={1} competence={filters.competence} onOpen={setSelected} />
+        <CycleColumn title="2/3" description="Uma Meta 3 para a promoção" items={columns.meta3} progress={2} competence={filters.competence} onOpen={setSelected} dataColumn="meta3" />
+        <PromotionColumn items={promotions} onOpen={setSelected} />
+      </div></div>}
+    <ProfileHistoryDialog item={selected} onClose={() => setSelected(null)} />
+  </div>;
+}
+
+function OperationalSummary({ promoted, promotionRecords, near, monitored }: { promoted: number; promotionRecords: number; near: number; monitored: number }) {
+  const items = [
+    { label: "Promovidos no período", value: promoted, support: `${promotionRecords} promoções`, icon: Award },
+    { label: "Próximos da promoção", value: near, support: "2/3", icon: Target },
+    { label: "Colaboradores monitorados", value: monitored, support: "perfis filtrados", icon: Users },
+  ];
+  return <section aria-label="Resumo operacional" className="grid overflow-hidden rounded-2xl border bg-card shadow-card md:grid-cols-3">{items.map(({ label, value, support, icon: Icon }) => <div key={label} className="flex items-center gap-4 border-b p-5 last:border-0 md:border-b-0 md:border-r"><div className="rounded-full bg-primary/10 p-3"><Icon aria-hidden="true" className="h-5 w-5 text-primary" /></div>
+    <div><p className="text-xs text-muted-foreground">{label}</p><p className="text-2xl font-extrabold">{value}</p><p className="text-xs text-muted-foreground">{support}</p></div></div>)}</section>;
+}
+
+function ColumnShell({ title, description, count, tone, dataColumn, children }: { title: string; description: string; count: number; tone: string; dataColumn?: string; children: React.ReactNode }) {
+  return <section data-column={dataColumn} className="overflow-hidden rounded-2xl border bg-card shadow-card"><header className={`border-b p-4 ${tone}`}><div className="flex items-center justify-between gap-2"><h2 className="font-display text-base font-bold">{title}</h2><Badge variant="secondary">{count}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{description}</p></header>
+    <div className="max-h-[590px] space-y-3 overflow-y-auto p-3">{count === 0 ? <p role="status" className="rounded-xl border border-dashed p-5 text-center text-xs text-muted-foreground">Nenhum colaborador nesta etapa.</p> : children}</div></section>;
+}
+
+function CycleColumn({ title, description, items, progress, competence, onOpen, dataColumn }: { title: string; description: string; items: PerfilComHistorico[]; progress: number; competence: string; onOpen: (item: PerfilComHistorico) => void; dataColumn?: string }) {
+  const tones = ["bg-blue-50", "bg-purple-50", "bg-violet-100"];
+  return <ColumnShell title={title} description={description} count={items.length} tone={tones[progress]} dataColumn={dataColumn}>{items.map((item) => {
+    const result = item.resultados.find((row) => row.competencia === competence);
+    return <PersonCard key={item.perfil.id} item={item} onOpen={onOpen}><div className="flex flex-wrap gap-1.5"><Badge variant={item.perfil.ativo ? "secondary" : "outline"}>{item.perfil.ativo ? "Ativo" : "Inativo"}</Badge>
+      {progress === 2 && <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Próximo da promoção</Badge>}</div>
+      <p className="text-xs text-muted-foreground">{formatarSquadAtual(item.perfil.squad_atual)} · {item.perfil.posicao_atual ?? "Posição não informada"}</p>
+      <p className="text-xs text-muted-foreground">{item.perfil.senioridade_atual ?? "Senioridade não informada"} · {formatarEtapaProgresso(progress)}</p>
+      <p className="text-xs"><span className="text-muted-foreground">{competence ? formatarCompetencia(competence) : "Competência"}:</span> {result?.meta_alcancada ?? "Sem resultado"}</p></PersonCard>;
+  })}</ColumnShell>;
+}
+
+function PromotionColumn({ items, onOpen }: { items: PromotionView[]; onOpen: (item: PerfilComHistorico) => void }) {
+  return <ColumnShell title="Promovidos no período" description="Registros da competência" count={items.length} tone="bg-emerald-50" dataColumn="promoted">{items.map(({ profile, result, previousSeniority, nextSeniority }) => <PersonCard key={result.id} item={profile} onOpen={onOpen} accent="green">
+    <p className="text-xs text-muted-foreground">{formatarSquadAtual(profile.perfil.squad_atual)} · {profile.perfil.posicao_atual ?? "Posição não informada"}</p>
+    <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700">{previousSeniority}<ArrowRight aria-hidden="true" className="h-4 w-4" />{nextSeniority}</p>
+    <p className="text-xs text-muted-foreground">{result.competencia ? formatarCompetencia(result.competencia) : "Competência não informada"}</p></PersonCard>)}</ColumnShell>;
+}
+
+function PersonCard({ item, onOpen, accent, children }: { item: PerfilComHistorico; onOpen: (item: PerfilComHistorico) => void; accent?: "green"; children: React.ReactNode }) {
+  return <Card className={accent === "green" ? "border-emerald-200 bg-emerald-50/40" : "bg-white"}><CardContent className="space-y-2 p-4"><p className="font-semibold leading-snug">{item.perfil.nome_colaborador}</p>{children}
+    <Button variant="link" className="h-auto p-0 text-xs" onClick={() => onOpen(item)}><Eye aria-hidden="true" className="mr-1 h-3.5 w-3.5" />Ver histórico</Button></CardContent></Card>;
+}
