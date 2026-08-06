@@ -10,10 +10,30 @@ ALTER TABLE public.colaboradores_perfis
   ADD CONSTRAINT colaboradores_perfis_jornada_atual_check
   CHECK (jornada_atual IS NULL OR jornada_atual IN ('Ativo','Inativo','Desligado','Saiu'));
 
+ALTER TABLE public.colaboradores_perfis
+  DROP CONSTRAINT IF EXISTS colaboradores_perfis_progresso_meta3_check;
+ALTER TABLE public.colaboradores_perfis
+  ADD CONSTRAINT colaboradores_perfis_progresso_meta3_check
+  CHECK (progresso_meta3 BETWEEN 0 AND 2);
+
+CREATE TABLE IF NOT EXISTS public.career_progression_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  colaborador_id uuid NOT NULL REFERENCES public.colaboradores_perfis(id) ON DELETE CASCADE,
+  competencia date NOT NULL,
+  event_type text NOT NULL CHECK (event_type IN ('career_cycle_completed')),
+  senioridade text NOT NULL,
+  recebeu_promocao boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (colaborador_id, competencia, event_type)
+);
+ALTER TABLE public.career_progression_events ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.career_progression_events FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.career_progression_events TO service_role;
+
 CREATE OR REPLACE FUNCTION public.normalize_career_goal(raw_value text)
 RETURNS text LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, public AS $$
-  SELECT CASE regexp_replace(upper(translate(trim(coalesce(raw_value, '')),
-    'ÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ', 'AAAAAEEEEIIIIOOOOOUUUUC')), '[[:space:]]+', ' ', 'g')
+  SELECT CASE regexp_replace(translate(upper(trim(coalesce(raw_value, ''))),
+    'ÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ', 'AAAAAEEEEIIIIOOOOOUUUUC'), '[[:space:]]+', ' ', 'g')
     WHEN '' THEN 'Sem presença' WHEN 'SEM PRESENCA' THEN 'Sem presença' WHEN 'AUSENTE' THEN 'Sem presença'
     WHEN 'META 1' THEN 'Meta 1' WHEN 'META 2' THEN 'Meta 2' WHEN 'META 3' THEN 'Meta 3'
     WHEN 'NENHUMA META' THEN 'Nenhuma meta' WHEN 'SEM META' THEN 'Nenhuma meta'
@@ -33,9 +53,28 @@ DECLARE
   normalized_goal text;
   previous_position text := NULL;
   current_position text;
+  completed_competences date[] := ARRAY[]::date[];
 BEGIN
   SELECT * INTO STRICT profile FROM public.colaboradores_perfis
   WHERE id=p_colaborador_id FOR UPDATE;
+
+  -- Only the first chronological valid level bootstraps the calculation. Later
+  -- informed levels are audit data, except at an explicit SDR -> Closer reset.
+  SELECT public.normalize_career_seniority(c.senioridade_informada)
+  INTO current_level
+  FROM public.colaboradores c
+  WHERE c.colaborador_id=p_colaborador_id
+    AND public.normalize_career_seniority(c.senioridade_informada) IS NOT NULL
+  ORDER BY c.competencia,c.id LIMIT 1;
+  IF current_level IS NULL THEN
+    SELECT public.normalize_career_seniority(c.senioridade)
+    INTO current_level
+    FROM public.colaboradores c
+    WHERE c.colaborador_id=p_colaborador_id
+      AND public.normalize_career_seniority(c.senioridade) IS NOT NULL
+    ORDER BY c.competencia,c.id LIMIT 1;
+  END IF;
+  current_level := coalesce(current_level, public.normalize_career_seniority(profile.senioridade_atual));
 
   FOR item IN
     SELECT c.* FROM public.colaboradores c
@@ -56,17 +95,13 @@ BEGIN
     current_position := upper(trim(coalesce(item.posicao,'')));
     IF previous_position='SDR' AND current_position='CLOSER' THEN
       current_progress := 0;
+      current_level := coalesce(
+        public.normalize_career_seniority(item.senioridade_informada),
+        current_level
+      );
     END IF;
     IF current_position<>'' THEN previous_position := current_position; END IF;
 
-    -- Priority: informed in this competence; previous historical/resulting level;
-    -- stored historical level; current profile only as last fallback.
-    current_level := coalesce(
-      public.normalize_career_seniority(item.senioridade_informada),
-      current_level,
-      public.normalize_career_seniority(item.senioridade),
-      public.normalize_career_seniority(profile.senioridade_atual)
-    );
     IF current_level IS NULL THEN
       RAISE EXCEPTION 'Sem senioridade válida no resultado %',item.id USING ERRCODE='22023';
     END IF;
@@ -79,8 +114,14 @@ BEGIN
         IF next_level IS NOT NULL THEN
           promoted := true;
         ELSE
-          RAISE LOG 'career_cycle_completed collaborator_id=% competence=% seniority=Sênior 3 promotion=false',
-            p_colaborador_id,item.competencia;
+          completed_competences := array_append(completed_competences,item.competencia);
+          INSERT INTO public.career_progression_events(
+            colaborador_id,competencia,event_type,senioridade,recebeu_promocao
+          ) VALUES (
+            p_colaborador_id,item.competencia,'career_cycle_completed',current_level,false
+          ) ON CONFLICT (colaborador_id,competencia,event_type) DO UPDATE SET
+            senioridade=excluded.senioridade,
+            recebeu_promocao=false;
         END IF;
       ELSE
         current_progress := least(current_progress+1,2);
@@ -99,6 +140,11 @@ BEGIN
     );
     IF promoted THEN current_level := next_level; END IF;
   END LOOP;
+
+  DELETE FROM public.career_progression_events e
+  WHERE e.colaborador_id=p_colaborador_id
+    AND e.event_type='career_cycle_completed'
+    AND NOT (e.competencia=ANY(completed_competences));
 
   current_level := coalesce(current_level, public.normalize_career_seniority(profile.senioridade_atual));
   UPDATE public.colaboradores_perfis SET
@@ -132,6 +178,8 @@ DECLARE
   person_id uuid;
   journey text;
   affected_ids uuid[] := ARRAY[]::uuid[];
+  historical_updates integer := 0;
+  changed_rows integer;
 BEGIN
   response := public.sincronizar_progressao_planilha_lote_validado_v1(p_perfis,p_resultados,p_origem);
 
@@ -153,15 +201,32 @@ BEGIN
   FOR item IN SELECT value FROM jsonb_array_elements(p_resultados) LOOP
     SELECT id INTO person_id FROM public.colaboradores_perfis
     WHERE nome_normalizado=public.normalize_career_name(item->>'nome_colaborador');
-    IF person_id IS NOT NULL AND NOT person_id=ANY(affected_ids) THEN
-      affected_ids:=array_append(affected_ids,person_id);
+    IF person_id IS NOT NULL THEN
+      UPDATE public.colaboradores SET
+        nome_colaborador=coalesce(nullif(trim(regexp_replace(item->>'nome_colaborador','[[:space:]]+',' ','g')),''),nome_colaborador),
+        posicao=coalesce(nullif(trim(item->>'posicao'),''),posicao),
+        squad=coalesce(nullif(trim(item->>'squad'),''),squad),
+        updated_at=now()
+      WHERE colaborador_id=person_id
+        AND competencia=(item->>'competencia')::date
+        AND (
+          nome_colaborador IS DISTINCT FROM coalesce(nullif(trim(regexp_replace(item->>'nome_colaborador','[[:space:]]+',' ','g')),''),nome_colaborador)
+          OR posicao IS DISTINCT FROM coalesce(nullif(trim(item->>'posicao'),''),posicao)
+          OR squad IS DISTINCT FROM coalesce(nullif(trim(item->>'squad'),''),squad)
+        );
+      GET DIAGNOSTICS changed_rows=ROW_COUNT;
+      historical_updates:=historical_updates+changed_rows;
+      IF NOT person_id=ANY(affected_ids) THEN affected_ids:=array_append(affected_ids,person_id); END IF;
     END IF;
   END LOOP;
 
   FOREACH person_id IN ARRAY affected_ids LOOP
     PERFORM public.recalcular_progressao_colaborador(person_id);
   END LOOP;
-  RETURN response || jsonb_build_object('politica','linhas previamente validadas; lote válido transacional');
+  RETURN response || jsonb_build_object(
+    'politica','linhas previamente validadas; lote válido transacional',
+    'historicos_atualizados',historical_updates
+  );
 END $$;
 
 REVOKE ALL ON FUNCTION public.sincronizar_progressao_planilha_lote_validado_v1(jsonb,jsonb,text) FROM PUBLIC,anon,authenticated,service_role;

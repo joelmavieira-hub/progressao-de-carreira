@@ -2,8 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
 const AUTHORIZED_SUPABASE_URL = "https://ygyiygqfiupadgnaaxlz.supabase.co";
-const BLOCKED_SECRET_PREFIX = String.fromCharCode(115, 98, 95, 115, 101, 99, 114, 101, 116, 95);
-const BLOCKED_ROLE_PATTERN = new RegExp(["service", "role"].join("_"), "i");
+const REQUIRED_PUBLIC_KEY_PREFIX = "sb_publishable_";
 let singleton: SupabaseClient<Database> | null = null;
 
 function readPublicConfiguration() {
@@ -18,8 +17,8 @@ function readPublicConfiguration() {
   if (url !== AUTHORIZED_SUPABASE_URL) {
     throw new Error("O frontend não está configurado para o projeto Supabase autorizado.");
   }
-  if (publishableKey.startsWith(BLOCKED_SECRET_PREFIX) || BLOCKED_ROLE_PATTERN.test(publishableKey)) {
-    throw new Error("Credencial privilegiada recusada no frontend.");
+  if (!publishableKey.startsWith(REQUIRED_PUBLIC_KEY_PREFIX)) {
+    throw new Error("A credencial do frontend não é uma chave publicável.");
   }
 
   return { url, publishableKey };

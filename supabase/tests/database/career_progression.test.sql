@@ -1,6 +1,6 @@
 ﻿BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
-SELECT plan(109);
+SELECT plan(111);
 
 CREATE TEMP TABLE pgtap_finish_output (
   line text NOT NULL
@@ -159,8 +159,8 @@ INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT count(*) FROM public.
 INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT senioridade_atual FROM public.colaboradores_perfis WHERE nome_normalizado='zz teste rpc alice rpc'),'Júnior 1','old correction recomputes later seniority');
 INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT progresso_meta3 FROM public.colaboradores_perfis WHERE nome_normalizado='zz teste rpc alice rpc'),2,'old correction recomputes later progress');
 INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT count(*) FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado='zz teste rpc alice rpc'),6::bigint,'correction never deletes history');
-INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT c.squad FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado='zz teste rpc alice rpc' AND c.competencia=date '2026-01-01'),'Lobo','correction preserves historical squad');
-INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT c.posicao FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado='zz teste rpc alice rpc' AND c.competencia=date '2026-01-01'),'SDR','correction preserves historical position');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT c.squad FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado='zz teste rpc alice rpc' AND c.competencia=date '2026-01-01'),'Águia','correction accepts authoritative historical squad');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT c.posicao FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado='zz teste rpc alice rpc' AND c.competencia=date '2026-01-01'),'Closer','correction accepts authoritative historical position');
 INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT (payload->>'colaboradores_recalculados')::integer FROM sync_response),1,'real Meta 3 to Meta 2 correction selectively recalculates one collaborator');
 INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT count(*) FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado='zz teste rpc alice rpc' AND c.updated_at>timestamptz '2020-01-01'),2::bigint,'real correction updates timestamps only on functionally changed history rows');
 INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT count(*) FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado='zz teste rpc alice rpc' AND c.updated_at<timestamptz '2020-01-01'),4::bigint,'real correction preserves timestamps on unchanged history rows');
@@ -190,12 +190,14 @@ SELECT public.sincronizar_progressao_planilha(
 INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT senioridade_atual FROM public.colaboradores_perfis WHERE nome_normalizado='zz teste rpc senior topo'),'Sênior 3','career top never advances');
 INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT count(*) FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado='zz teste rpc senior topo' AND c.recebeu_promocao),0::bigint,'career top has no fictitious promotion');
 INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT progresso_meta3 FROM public.colaboradores_perfis WHERE nome_normalizado='zz teste rpc senior topo'),0,'third career-top Meta 3 completes and resets cycle');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT count(*) FROM public.career_progression_events e JOIN public.colaboradores_perfis p ON p.id=e.colaborador_id WHERE p.nome_normalizado='zz teste rpc senior topo' AND e.event_type='career_cycle_completed' AND e.competencia=date '2026-03-01' AND e.senioridade='Sênior 3' AND NOT e.recebeu_promocao),1::bigint,'third career-top Meta 3 persists a non-promotional cycle completion event');
 SELECT public.sincronizar_progressao_planilha(
  jsonb_build_array(jsonb_build_object('nome_colaborador','ZZ TESTE RPC Senior Topo','posicao','SDR','squad','Lobo','ativo',true)),
  jsonb_build_array(jsonb_build_object('nome_colaborador','ZZ TESTE RPC Senior Topo','posicao','SDR','squad','Lobo','competencia','2026-04-01','meta_alcancada','Meta 3','senioridade_informada','Sênior 3')),
  'zz_teste_rpc_pgtap');
 INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT progresso_meta3 FROM public.colaboradores_perfis WHERE nome_normalizado='zz teste rpc senior topo'),1,'next career-top Meta 3 starts new cycle at one');
 INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT count(*) FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado='zz teste rpc senior topo' AND c.recebeu_promocao),0::bigint,'career-top cycle completion remains non-promotional after new cycle starts');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT count(*) FROM public.career_progression_events e JOIN public.colaboradores_perfis p ON p.id=e.colaborador_id WHERE p.nome_normalizado='zz teste rpc senior topo' AND e.event_type='career_cycle_completed'),1::bigint,'starting the next career-top cycle preserves the prior completion event');
 
 INSERT INTO pgtap_assertion_output(line) SELECT throws_ok($call$SELECT public.sincronizar_progressao_planilha(
  jsonb_build_array(jsonb_build_object('nome_colaborador','ZZ TESTE RPC Rollback Teste','posicao','SDR','squad','Lobo','ativo',true)),
@@ -286,5 +288,5 @@ SELECT
   coalesce((SELECT jsonb_agg(line ORDER BY sequence) FROM pgtap_assertion_output
     WHERE line LIKE 'not ok %'),'[]'::jsonb) AS not_ok_lines,
   coalesce((SELECT jsonb_agg(line ORDER BY line) FROM pgtap_finish_output),'[]'::jsonb) AS diagnostics,
-  extensions.num_failed()=0 AND extensions._currtest()=109 AS ok;
+  extensions.num_failed()=0 AND extensions._currtest()=111 AS ok;
 ROLLBACK;

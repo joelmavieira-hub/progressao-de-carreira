@@ -132,6 +132,17 @@ describe("identidade e mobilidade", () => {
     expect(getCurrentPosition(history)).toBe("Closer");
     expect(history[0].squad).toBe("LOBO");
   });
+
+  it("troca de SDR para Closer aceita a senioridade inicial do novo ciclo", () => {
+    const history = [
+      { ...record("2026-05-01", "meta3", "Júnior 3"), position: "SDR", informedSeniority: "Júnior 3" as Seniority },
+      { ...record("2026-06-01", "meta3", "Júnior 3"), position: "SDR", informedSeniority: "Júnior 3" as Seniority },
+      { ...record("2026-07-01", "absent", "Júnior 2"), position: "Closer", informedSeniority: "Júnior 2" as Seniority },
+    ];
+    expect(computeProgression(history)).toMatchObject({
+      meta3Streak: 0, seniorityAtPeriod: "Júnior 2", resetCompetence: "2026-07-01",
+    });
+  });
 });
 
 describe("ausência, recomposição e competência legada", () => {
@@ -152,13 +163,13 @@ describe("ausência, recomposição e competência legada", () => {
     expect(parseLegacyCompetence("abril talvez")).toBeNull();
   });
 
-  it("senioridade informada na competência tem prioridade sem reescrever meses anteriores", () => {
+  it("senioridade informada posterior permanece auditável sem sobrescrever a progressão calculada", () => {
     const history = [
       record("2026-01-01", "meta3"), record("2026-02-01", "meta3"),
       record("2026-03-01", "meta3"),
       { ...record("2026-04-01", "meta1", "Júnior 2"), informedSeniority: "Júnior 1" as Seniority },
     ];
-    expect(computeProgression(history).seniorityAtPeriod).toBe("Júnior 1");
+    expect(computeProgression(history).seniorityAtPeriod).toBe("Júnior 2");
   });
 });
 

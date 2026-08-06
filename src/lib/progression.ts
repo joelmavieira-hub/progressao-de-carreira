@@ -182,7 +182,12 @@ export function parseLegacyCompetence(value: string | null | undefined, baseYear
 /** Pure chronological reconstruction using the competence-level seniority priority. */
 export function computeProgression(history: readonly MonthRecord[], currentSeniority?: string | null, throughCompetence?: string | null): ProgressionState {
   const ordered = uniqueRecordsByCompetence(history, throughCompetence);
-  let seniority: Seniority | null = null;
+  let seniority: Seniority | null = ordered
+    .map((record) => normalizeSeniority(record.informedSeniority))
+    .find((value): value is Seniority => value !== null)
+    ?? ordered.map((record) => normalizeSeniority(record.seniority))
+      .find((value): value is Seniority => value !== null)
+    ?? normalizeSeniority(currentSeniority);
   let progress = 0;
   let wasReset = false;
   let resetCompetence: string | null = null;
@@ -196,6 +201,7 @@ export function computeProgression(history: readonly MonthRecord[], currentSenio
     const historicalPosition = normalizedPosition(record.position);
     if (previousPosition === "SDR" && historicalPosition === "CLOSER") {
       progress = 0;
+      seniority = normalizeSeniority(record.informedSeniority) ?? seniority;
       currentCycleMeta3Competences = [];
       wasReset = true;
       resetCompetence = record.competence ?? null;
@@ -203,11 +209,6 @@ export function computeProgression(history: readonly MonthRecord[], currentSenio
     }
     if (historicalPosition) previousPosition = historicalPosition;
 
-    // Competence-level information wins without changing already processed months.
-    seniority = normalizeSeniority(record.informedSeniority)
-      ?? seniority
-      ?? normalizeSeniority(record.seniority)
-      ?? normalizeSeniority(currentSeniority);
     if (!seniority) continue;
     lastGoal = record.goal;
     const result = processMonthlyGoal(seniority, progress, record.goal);
