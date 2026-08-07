@@ -77,6 +77,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          jornada_atual: string | null
           nome_colaborador: string
           nome_normalizado: string
           posicao_atual: string | null
@@ -89,6 +90,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          jornada_atual?: string | null
           nome_colaborador: string
           nome_normalizado: string
           posicao_atual?: string | null
@@ -101,6 +103,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          jornada_atual?: string | null
           nome_colaborador?: string
           nome_normalizado?: string
           posicao_atual?: string | null

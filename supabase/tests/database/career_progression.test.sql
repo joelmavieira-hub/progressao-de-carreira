@@ -1,6 +1,6 @@
 ﻿BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
-SELECT plan(111);
+SELECT plan(131);
 
 CREATE TEMP TABLE pgtap_finish_output (
   line text NOT NULL
@@ -242,7 +242,7 @@ INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT c.senioridade FROM pu
 INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT senioridade_atual FROM public.colaboradores_perfis WHERE nome_normalizado='zz teste rpc ausência bootstrap'),'Júnior 1','Sem presença does not change seniority');
 INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT progresso_meta3 FROM public.colaboradores_perfis WHERE nome_normalizado='zz teste rpc ausência bootstrap'),1,'Sem presença preserves progress before later Meta 3');
 
--- Later informed levels are audit-only and cannot overwrite calculated progression.
+-- Later informed levels are authoritative and begin a new level cycle.
 SELECT public.sincronizar_progressao_planilha(
   jsonb_build_array(jsonb_build_object('nome_colaborador','ZZ TESTE RPC Bootstrap Cronológico','posicao','SDR','squad','Lobo','ativo',true)),
   jsonb_build_array(
@@ -250,11 +250,11 @@ SELECT public.sincronizar_progressao_planilha(
     jsonb_build_object('nome_colaborador','ZZ TESTE RPC Bootstrap Cronológico','posicao','SDR','squad','Lobo','competencia','2026-02-01','meta_alcancada','Meta 3','senioridade_informada','Sênior 3'),
     jsonb_build_object('nome_colaborador','ZZ TESTE RPC Bootstrap Cronológico','posicao','SDR','squad','Lobo','competencia','2026-03-01','meta_alcancada','Meta 3','senioridade_informada','Sênior 3')),
   'zz_teste_rpc_pgtap');
-INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT senioridade_atual FROM public.colaboradores_perfis WHERE nome_normalizado='zz teste rpc bootstrap cronológico'),'Júnior 2','first chronological valid seniority bootstraps calculation');
-INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT c.senioridade FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado='zz teste rpc bootstrap cronológico' AND c.competencia=date '2026-03-01'),'Júnior 1','promoter month keeps calculated previous seniority');
-INSERT INTO pgtap_assertion_output(line) SELECT ok((SELECT c.recebeu_promocao FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado='zz teste rpc bootstrap cronológico' AND c.competencia=date '2026-03-01'),'third Meta 3 promotes despite later informed Sênior 3');
-INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT progresso_meta3 FROM public.colaboradores_perfis WHERE nome_normalizado='zz teste rpc bootstrap cronológico'),0,'chronological promotion resets progress');
-INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT c.senioridade_informada FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado='zz teste rpc bootstrap cronológico' AND c.competencia=date '2026-03-01'),'Sênior 3','later informed seniority remains available only for audit');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT senioridade_atual FROM public.colaboradores_perfis WHERE nome_normalizado='zz teste rpc bootstrap cronológico'),'Sênior 3','latest informed seniority becomes current');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT c.senioridade FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado='zz teste rpc bootstrap cronológico' AND c.competencia=date '2026-03-01'),'Sênior 3','competence stores its authoritative seniority');
+INSERT INTO pgtap_assertion_output(line) SELECT isnt((SELECT c.recebeu_promocao FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado='zz teste rpc bootstrap cronológico' AND c.competencia=date '2026-03-01'),true,'two Meta 3 in the new level do not promote');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT progresso_meta3 FROM public.colaboradores_perfis WHERE nome_normalizado='zz teste rpc bootstrap cronológico'),2,'level change resets before evaluating its first Meta 3');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT c.senioridade_informada FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado='zz teste rpc bootstrap cronológico' AND c.competencia=date '2026-03-01'),'Sênior 3','authoritative informed seniority remains auditable');
 
 INSERT INTO pgtap_assertion_output(line) SELECT throws_ok($call$SELECT public.sincronizar_progressao_planilha(
  jsonb_build_array(
@@ -276,6 +276,28 @@ INSERT INTO pgtap_assertion_output(line) SELECT isnt(has_function_privilege('ano
 INSERT INTO pgtap_assertion_output(line) SELECT isnt(has_function_privilege('authenticated','public.sincronizar_progressao_planilha(jsonb,jsonb,text)','EXECUTE'),true,'authenticated cannot execute sync RPC');
 INSERT INTO pgtap_assertion_output(line) SELECT ok(has_function_privilege('service_role','public.sincronizar_progressao_planilha(jsonb,jsonb,text)','EXECUTE'),'service_role can execute sync RPC');
 
+-- Production acceptance: nominal corrections and operational cardinality.
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT posicao_atual FROM public.colaboradores_perfis WHERE nome_normalizado=public.normalize_career_name('Luan Nicolas Sinesio Crisostomo')),'Closer','Luan is Closer');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT senioridade_atual FROM public.colaboradores_perfis WHERE nome_normalizado=public.normalize_career_name('Luan Nicolas Sinesio Crisostomo')),'Júnior 3','Luan is Júnior 3');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT progresso_meta3 FROM public.colaboradores_perfis WHERE nome_normalizado=public.normalize_career_name('Luan Nicolas Sinesio Crisostomo')),1,'Luan uses only current authoritative cycle');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT posicao_atual FROM public.colaboradores_perfis WHERE nome_normalizado=public.normalize_career_name('João Paulo Maciel Sousa')),'Closer','João Paulo is Closer');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT senioridade_atual FROM public.colaboradores_perfis WHERE nome_normalizado=public.normalize_career_name('João Paulo Maciel Sousa')),'Júnior 1','João Paulo is Júnior 1');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT progresso_meta3 FROM public.colaboradores_perfis WHERE nome_normalizado=public.normalize_career_name('João Paulo Maciel Sousa')),0,'João Paulo current cycle is zero');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT posicao_atual FROM public.colaboradores_perfis WHERE nome_normalizado=public.normalize_career_name('Gustavo Duarte Pinheiro Silva')),'Closer','Gustavo is Closer');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT senioridade_atual FROM public.colaboradores_perfis WHERE nome_normalizado=public.normalize_career_name('Gustavo Duarte Pinheiro Silva')),'Júnior 3','Gustavo is Júnior 3');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT progresso_meta3 FROM public.colaboradores_perfis WHERE nome_normalizado=public.normalize_career_name('Gustavo Duarte Pinheiro Silva')),1,'Gustavo current cycle is one');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT posicao_atual FROM public.colaboradores_perfis WHERE nome_normalizado=public.normalize_career_name('Leandro Dos Santos Pereira')),'Closer','Leandro is Closer');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT senioridade_atual FROM public.colaboradores_perfis WHERE nome_normalizado=public.normalize_career_name('Leandro Dos Santos Pereira')),'Pleno 1','Leandro is Pleno 1');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT progresso_meta3 FROM public.colaboradores_perfis WHERE nome_normalizado=public.normalize_career_name('Leandro Dos Santos Pereira')),1,'Leandro current cycle is one');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT count(*) FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado=public.normalize_career_name('João Paulo Maciel Sousa') AND c.competencia<date '2026-06-01' AND c.posicao='SDR'),5::bigint,'João preserves five SDR competencies');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT count(*) FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado=public.normalize_career_name('João Paulo Maciel Sousa') AND c.competencia>=date '2026-06-01' AND c.posicao='Closer'),3::bigint,'João starts Closer in June');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT count(*) FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado=public.normalize_career_name('Miguel Carneiro Nunes') AND c.competencia<=date '2026-06-01' AND c.posicao='SDR'),6::bigint,'Miguel SDR history remains preserved');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT count(*) FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado=public.normalize_career_name('Tatyanna Lima de Freitas') AND c.competencia<=date '2026-06-01' AND c.posicao='SDR'),6::bigint,'Taty SDR history remains preserved');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT posicao_atual FROM public.colaboradores_perfis WHERE nome_normalizado=public.normalize_career_name('Gabrielly de Oliveira Medeiros')),'Parcerias','Gabrielly is outside SDR and Closer');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT count(*) FROM public.colaboradores c JOIN public.colaboradores_perfis p ON p.id=c.colaborador_id WHERE p.nome_normalizado=public.normalize_career_name('Gabrielly de Oliveira Medeiros')),8::bigint,'Gabrielly history is preserved');
+INSERT INTO pgtap_assertion_output(line) SELECT ok((SELECT ativo AND posicao_atual IN ('SDR','Closer') AND coalesce(public.normalize_career_name(squad_atual),'')<>'saiu' FROM public.colaboradores_perfis WHERE nome_normalizado=public.normalize_career_name('Cleber Rodrigues Souza')),'Cleber remains operationally active');
+INSERT INTO pgtap_assertion_output(line) SELECT is((SELECT count(DISTINCT p.id) FROM public.colaboradores_perfis p JOIN public.colaboradores c ON c.colaborador_id=p.id WHERE p.ativo AND p.posicao_atual IN ('SDR','Closer') AND coalesce(public.normalize_career_name(p.squad_atual),'')<>'saiu'),(SELECT count(*) FROM public.colaboradores_perfis p WHERE p.ativo AND p.posicao_atual IN ('SDR','Closer') AND coalesce(public.normalize_career_name(p.squad_atual),'')<>'saiu'),'monthly join does not multiply operational people');
+
 INSERT INTO pgtap_finish_output SELECT * FROM finish(true);
 
 SELECT
@@ -288,5 +310,5 @@ SELECT
   coalesce((SELECT jsonb_agg(line ORDER BY sequence) FROM pgtap_assertion_output
     WHERE line LIKE 'not ok %'),'[]'::jsonb) AS not_ok_lines,
   coalesce((SELECT jsonb_agg(line ORDER BY line) FROM pgtap_finish_output),'[]'::jsonb) AS diagnostics,
-  extensions.num_failed()=0 AND extensions._currtest()=111 AS ok;
+  extensions.num_failed()=0 AND extensions._currtest()=131 AS ok;
 ROLLBACK;

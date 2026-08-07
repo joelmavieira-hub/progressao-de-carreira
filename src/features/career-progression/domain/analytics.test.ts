@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { relacionarPerfisEResultados } from "../domain";
 import type { ColaboradorPerfil, ColaboradorResultado, PerfilComHistorico } from "../types";
 import {
-  buildCycleColumns, calculateCoverage, countUniquePromoted, distributeCycle, distributeSeniority, filterProfiles,
+  buildCycleColumns, calculateCoverage, countUniquePromoted, distributeCycle, distributeSeniority, filterHistoricalResults, filterProfiles,
   findNearPromotion, findRecentPromotions, groupGoalsByCompetence, groupProgressBySquad,
   groupPromotionsByCompetence, listCompetences, nextSeniority, normalizeSearch, type AnalyticsFilters,
 } from "./analytics";
@@ -37,6 +37,39 @@ describe("analytics", () => {
   });
   it("ordena competências cronologicamente", () => expect(listCompetences([result("r2", "1", "2026-08-01"), result("r1", "1", "2026-01-01")])).toEqual(["2026-01-01", "2026-08-01"]));
   it("agrupa metas por competência", () => expect(groupGoalsByCompetence([result("r1", "1", "2026-01-01", "Meta 3")])[0]["Meta 3"]).toBe(1));
+  it("conta Meta 1, Meta 2 e Meta 3 como atingimento mensal", () => {
+    const rows = [
+      result("r1", "1", "2026-08-01", "Meta 1", false, { posicao: "Closer" }),
+      result("r2", "2", "2026-08-01", "Meta 2", false, { posicao: "Closer" }),
+      result("r3", "3", "2026-08-01", "Meta 3", false, { posicao: "Closer" }),
+      result("r4", "4", "2026-08-01", "Meta 3", false, { posicao: "Closer" }),
+      result("r5", "5", "2026-08-01", "Meta 2", false, { posicao: "Closer" }),
+      result("r6", "6", "2026-08-01", "Meta 1", false, { posicao: "Closer" }),
+      result("r7", "7", "2026-08-01", "Meta 3", false, { posicao: "Closer" }),
+      result("r8", "8", "2026-08-01", "Nenhuma meta", false, { posicao: "Closer" }),
+      result("r9", "9", "2026-08-01", "Sem presença", false, { posicao: "Closer" }),
+    ];
+    expect(groupGoalsByCompetence(rows)[0]).toMatchObject({
+      "Atingiram meta": 7, "Meta 1": 2, "Meta 2": 2, "Meta 3": 3,
+      "Nenhuma meta": 1, "Sem presença": 1,
+    });
+  });
+  it("conta a mesma pessoa uma única vez por competência", () => {
+    const rows = [
+      result("r1", "1", "2026-08-01", "Meta 1", false, { updated_at: "2026-08-01T10:00:00Z" }),
+      result("r2", "1", "2026-08-01", "Meta 3", false, { updated_at: "2026-08-01T11:00:00Z" }),
+    ];
+    expect(groupGoalsByCompetence(rows)[0]).toMatchObject({ "Atingiram meta": 1, "Meta 1": 0, "Meta 3": 1 });
+  });
+  it("usa a posição histórica da competência no filtro mensal", () => {
+    const profiles = related([profile("1", { posicao_atual: "Closer" }), profile("2", { posicao_atual: "Closer" })]);
+    const rows = [
+      result("r1", "1", "2026-05-01", "Meta 3", false, { posicao: "SDR" }),
+      result("r2", "2", "2026-05-01", "Meta 2", false, { posicao: "Closer" }),
+    ];
+    const filtered = filterHistoricalResults(rows, profiles, filters({ position: "Closer" }));
+    expect(filtered.map((row) => row.id)).toEqual(["r2"]);
+  });
   it("agrupa registros de promoção por competência", () => {
     const rows = groupPromotionsByCompetence([result("r1", "1", "2026-01-01", "Meta 3", true), result("r2", "2", "2026-01-01", "Meta 3", true)]);
     expect(rows[0].total).toBe(2);

@@ -199,15 +199,27 @@ export function computeProgression(history: readonly MonthRecord[], currentSenio
   const sdrToCloserCompetences: string[] = [];
   for (const record of ordered) {
     const historicalPosition = normalizedPosition(record.position);
+    const informedSeniority = normalizeSeniority(record.informedSeniority);
     if (previousPosition === "SDR" && historicalPosition === "CLOSER") {
       progress = 0;
-      seniority = normalizeSeniority(record.informedSeniority) ?? seniority;
+      seniority = informedSeniority ?? seniority;
       currentCycleMeta3Competences = [];
       wasReset = true;
       resetCompetence = record.competence ?? null;
       if (record.competence) sdrToCloserCompetences.push(record.competence);
     }
     if (historicalPosition) previousPosition = historicalPosition;
+
+    // The sheet's competence-level seniority is authoritative. A level change
+    // starts a new level cycle before evaluating that competence, just like an
+    // explicit role transition starts the new Closer cycle at zero.
+    if (informedSeniority && informedSeniority !== seniority) {
+      seniority = informedSeniority;
+      progress = 0;
+      currentCycleMeta3Competences = [];
+      wasReset = true;
+      resetCompetence = record.competence ?? null;
+    }
 
     if (!seniority) continue;
     lastGoal = record.goal;

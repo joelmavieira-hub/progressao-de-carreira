@@ -8,9 +8,10 @@ import {
   type SDR,
 } from "@/lib/progression";
 import type { Tables } from "@/integrations/supabase/types";
+import type { ColaboradorPerfil } from "@/features/career-progression/types";
 
 export type CareerResultRow = Tables<"colaboradores">;
-export type CareerProfileRow = Tables<"colaboradores_perfis">;
+export type CareerProfileRow = ColaboradorPerfil;
 
 export interface CareerDataIssue {
   resultId: string;
@@ -118,7 +119,7 @@ export function buildCareerData(
 
 export function useColaboradoresSdrs() {
   const query = useCareerProgressionData();
-  const data = useMemo(() => buildCareerData(query.resultados, query.perfis), [query.perfis, query.resultados]);
+  const data = useMemo(() => buildCareerData(query.resultadosOperacionais, query.perfisOperacionais), [query.perfisOperacionais, query.resultadosOperacionais]);
   return {
     ...data,
     loading: query.isLoading,

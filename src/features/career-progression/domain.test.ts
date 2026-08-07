@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  CareerDataIntegrityError, calcularResumo, derivarOpcoesDeFiltro, filtrarPerfis, formatarSquadAtual, relacionarPerfisEResultados,
+  CareerDataIntegrityError, calcularResumo, derivarOpcoesDeFiltro, filtrarPerfis, formatarSquadAtual, montarDadosDeProgressao, relacionarPerfisEResultados,
 } from "./domain";
 import type { CareerProgressionFilters, ColaboradorPerfil, ColaboradorResultado } from "./types";
 
@@ -74,5 +74,22 @@ describe("dados puros de progressão", () => {
     expect(filtrarPerfis(relacionarPerfisEResultados([saiu], []), filters({ status: "inativos" }))).toHaveLength(1);
     expect(derivarOpcoesDeFiltro([saiu]).squads).toEqual([]);
     expect(formatarSquadAtual("Saiu")).toBe("Não se aplica");
+  });
+  it("separa base histórica de Parcerias e Saiu sem apagar seus resultados", () => {
+    const profiles = [
+      profile({ id: "cleber", nome_normalizado: "cleber", posicao_atual: "Closer" }),
+      profile({ id: "gabrielly", nome_normalizado: "gabrielly", posicao_atual: "Parcerias" }),
+      profile({ id: "saiu", nome_normalizado: "saiu", ativo: false, squad_atual: "Saiu" }),
+    ];
+    const results = profiles.map((item) => result("2026-08-01", { id: `r-${item.id}`, colaborador_id: item.id }));
+    const data = montarDadosDeProgressao(profiles, results);
+    expect(data.resumo).toMatchObject({ totalPerfis: 3, totalResultados: 3 });
+    expect(data.resumoOperacional).toMatchObject({ totalPerfis: 1, ativos: 1, totalResultados: 1 });
+    expect(data.perfisOperacionais.map((item) => item.id)).toEqual(["cleber"]);
+  });
+  it("exclui jornada Saiu mesmo com posição e squad operacionais", () => {
+    const data = montarDadosDeProgressao([profile({ jornada_atual: "Saiu" })], [result("2026-08-01")]);
+    expect(data.resumo).toMatchObject({ totalPerfis: 1, totalResultados: 1 });
+    expect(data.resumoOperacional).toMatchObject({ totalPerfis: 0, totalResultados: 0 });
   });
 });

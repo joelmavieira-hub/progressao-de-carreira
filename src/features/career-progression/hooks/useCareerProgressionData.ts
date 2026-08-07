@@ -13,6 +13,10 @@ export function useCareerProgressionData() {
   return {
     perfis: query.data?.perfis ?? [], resultados: query.data?.resultados ?? [],
     perfisComHistorico: query.data?.perfisComHistorico ?? [], resumo: query.data?.resumo ?? null,
+    perfisOperacionais: query.data?.perfisOperacionais ?? [],
+    resultadosOperacionais: query.data?.resultadosOperacionais ?? [],
+    perfisOperacionaisComHistorico: query.data?.perfisOperacionaisComHistorico ?? [],
+    resumoOperacional: query.data?.resumoOperacional ?? null,
     isLoading: query.isLoading, isFetching: query.isFetching,
     error: query.error instanceof Error ? query.error : null, refetch: query.refetch,
     lastUpdatedAt: query.dataUpdatedAt > 0 ? new Date(query.dataUpdatedAt) : null,

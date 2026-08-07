@@ -163,13 +163,13 @@ describe("ausência, recomposição e competência legada", () => {
     expect(parseLegacyCompetence("abril talvez")).toBeNull();
   });
 
-  it("senioridade informada posterior permanece auditável sem sobrescrever a progressão calculada", () => {
+  it("senioridade informada posterior inicia o novo ciclo autoritativo", () => {
     const history = [
       record("2026-01-01", "meta3"), record("2026-02-01", "meta3"),
       record("2026-03-01", "meta3"),
       { ...record("2026-04-01", "meta1", "Júnior 2"), informedSeniority: "Júnior 1" as Seniority },
     ];
-    expect(computeProgression(history).seniorityAtPeriod).toBe("Júnior 2");
+    expect(computeProgression(history)).toMatchObject({ seniorityAtPeriod: "Júnior 1", meta3Streak: 0, resetCompetence: "2026-04-01" });
   });
 });
 
@@ -189,9 +189,12 @@ describe("ordenação temporal e corte", () => {
     expect(computeProgression(history, "Júnior 1", "2026-02-01").meta3Streak).toBe(2);
   });
 
-  it("não deixa senioridade informada posterior criar um ciclo artificial", () => {
-    const history = [record("2026-01-01", "meta3", "Júnior 1"), record("2026-02-01", "meta3", "Júnior 2")];
-    expect(computeProgression(history).meta3Streak).toBe(2);
+  it("mudança informada reinicia antes de avaliar a competência", () => {
+    const history = [
+      { ...record("2026-01-01", "meta3"), informedSeniority: "Júnior 1" as Seniority },
+      { ...record("2026-02-01", "meta3"), informedSeniority: "Júnior 2" as Seniority },
+    ];
+    expect(computeProgression(history)).toMatchObject({ seniorityAtPeriod: "Júnior 2", meta3Streak: 1, resetCompetence: "2026-02-01" });
   });
 });
 
@@ -253,6 +256,37 @@ describe("casos obrigatórios de ciclo", () => {
       { ...record("2026-08-01", "absent", "Júnior 2"), position: "Closer", informedSeniority: "Júnior 2" },
     ];
     expect(computeProgression(history)).toMatchObject({ meta3Streak: 0, seniorityAtPeriod: "Júnior 2", resetCompetence: "2026-07-01" });
+  });
+
+  it.each([
+    ["Luan", [
+      { ...record("2026-04-01", "meta3"), position: "Closer", informedSeniority: "Júnior 2" as Seniority },
+      { ...record("2026-05-01", "meta3"), position: "Closer", informedSeniority: "Júnior 2" as Seniority },
+      { ...record("2026-06-01", "meta2"), position: "Closer", informedSeniority: "Júnior 3" as Seniority },
+      { ...record("2026-07-01", "meta3"), position: "Closer", informedSeniority: "Júnior 3" as Seniority },
+      { ...record("2026-08-01", "absent"), position: "Closer", informedSeniority: "Júnior 3" as Seniority },
+    ], "Júnior 3", 1],
+    ["Gustavo", [
+      { ...record("2026-04-01", "meta3"), position: "Closer", informedSeniority: "Júnior 2" as Seniority },
+      { ...record("2026-05-01", "meta3"), position: "Closer", informedSeniority: "Júnior 2" as Seniority },
+      { ...record("2026-06-01", "below"), position: "Closer", informedSeniority: "Júnior 3" as Seniority },
+      { ...record("2026-07-01", "meta3"), position: "Closer", informedSeniority: "Júnior 3" as Seniority },
+    ], "Júnior 3", 1],
+    ["Leandro", [
+      { ...record("2026-02-01", "meta3"), position: "Closer", informedSeniority: "Júnior 3" as Seniority },
+      { ...record("2026-03-01", "meta3"), position: "Closer", informedSeniority: "Júnior 3" as Seniority },
+      { ...record("2026-04-01", "meta3"), position: "Closer", informedSeniority: "Júnior 3" as Seniority },
+      { ...record("2026-05-01", "meta3"), position: "Closer", informedSeniority: "Pleno 1" as Seniority },
+      { ...record("2026-08-01", "absent"), position: "Closer", informedSeniority: "Pleno 1" as Seniority },
+    ], "Pleno 1", 1],
+    ["João Paulo", [
+      { ...record("2026-04-01", "meta3"), position: "SDR", informedSeniority: "Júnior 2" as Seniority },
+      { ...record("2026-05-01", "meta2"), position: "SDR", informedSeniority: "Júnior 3" as Seniority },
+      { ...record("2026-06-01", "absent"), position: "Closer", informedSeniority: "Júnior 3" as Seniority },
+      { ...record("2026-08-01", "absent"), position: "Closer", informedSeniority: "Júnior 1" as Seniority },
+    ], "Júnior 1", 0],
+  ] as Array<[string, MonthRecord[], Seniority, number]>)('%s respeita senioridade autoritativa e ciclo atual', (_name, history, seniority, expectedProgress) => {
+    expect(computeProgression(history)).toMatchObject({ seniorityAtPeriod: seniority, meta3Streak: expectedProgress });
   });
 });
 

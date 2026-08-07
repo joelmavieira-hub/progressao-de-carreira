@@ -1,6 +1,7 @@
 import type { Tables } from "@/integrations/supabase/types";
 
-export type ColaboradorPerfil = Tables<"colaboradores_perfis">;
+type GeneratedColaboradorPerfil = Tables<"colaboradores_perfis">;
+export type ColaboradorPerfil = Omit<GeneratedColaboradorPerfil, "jornada_atual"> & { jornada_atual?: string | null };
 export type ColaboradorResultado = Tables<"colaboradores">;
 
 export interface PerfilComHistorico {
@@ -30,6 +31,10 @@ export interface CareerProgressionData {
   resultados: ColaboradorResultado[];
   perfisComHistorico: PerfilComHistorico[];
   resumo: CareerProgressionSummary;
+  perfisOperacionais: ColaboradorPerfil[];
+  resultadosOperacionais: ColaboradorResultado[];
+  perfisOperacionaisComHistorico: PerfilComHistorico[];
+  resumoOperacional: CareerProgressionSummary;
 }
 
 export type ProfileStatusFilter = "todos" | "ativos" | "inativos";

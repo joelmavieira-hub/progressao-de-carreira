@@ -15,6 +15,7 @@ const state = vi.hoisted(() => {
 vi.mock("@/features/career-progression/hooks/useCareerProgressionData", () => ({
   useCareerProgressionData: () => ({
     perfis: state.mode === "empty" ? [] : [state.perfil], resultados: state.mode === "empty" ? [] : [state.resultado], perfisComHistorico: state.mode === "empty" ? [] : [{ perfil: state.perfil, resultados: [state.resultado], totalMeta3: 1, totalPromocoes: 1, ultimaCompetencia: "2026-08-01" }],
+    perfisOperacionais: state.mode === "empty" ? [] : [state.perfil], resultadosOperacionais: state.mode === "empty" ? [] : [state.resultado], perfisOperacionaisComHistorico: state.mode === "empty" ? [] : [{ perfil: state.perfil, resultados: [state.resultado], totalMeta3: 1, totalPromocoes: 1, ultimaCompetencia: "2026-08-01" }],
     resumo: state.mode === "empty" ? { totalPerfis: 0 } : { totalPerfis: 1, ativos: 1, inativos: 0, totalResultados: 1, progresso0: 0, progresso1: 0, progresso2: 1,
       promocoesRegistradas: 1, pessoasPromovidas: 1, competenciaMinima: "2026-08-01", competenciaMaxima: "2026-08-01" },
     isLoading: state.mode === "loading", isFetching: false, error: state.mode === "error" ? new Error("Falha") : null, refetch: state.refetch, lastUpdatedAt: new Date("2026-08-05T20:00:00Z"),

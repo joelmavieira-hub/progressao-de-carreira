@@ -57,6 +57,10 @@ function applyConfirmedCorrections(profile: Profile, rows: Result[]): Result[] {
       : row.competencia && row.competencia >= "2026-04-01" ? "Júnior 3" : null,
     meta_alcancada: row.competencia && row.competencia >= "2026-07-01" ? "Sem presença" : row.meta_alcancada,
   }));
+  if (name === normalizeName("João Paulo Maciel Sousa")) return rows.map((row) => ({
+    ...row,
+    posicao: row.competencia && row.competencia < "2026-06-01" ? "SDR" : "Closer",
+  }));
   return rows;
 }
 
@@ -96,15 +100,19 @@ async function main() {
       promocoes: state.promotionCompetences,
       conclusoesDeCiclo: state.cycleCompletionCompetences,
       motivos: reasons,
-      correcoesConfirmadasSimuladas: ["Miguel Carneiro Nunes", "Tatyanna Lima de Freitas"]
+      correcoesConfirmadasSimuladas: ["Miguel Carneiro Nunes", "Tatyanna Lima de Freitas", "João Paulo Maciel Sousa"]
         .some((name) => normalizeName(profile.nome_colaborador) === normalizeName(name)),
       alteracaoPrevista: reasons.some((reason) => !reason.startsWith("reset SDR→Closer"))
         || profile.progresso_meta3 !== state.meta3Streak,
     };
   });
-  const named = ["Adrilene", "Taty", "Miguel", "Luiz", "Luan", "Gustavo", "Leandro", "João Paulo"]
-    .map((name) => {
-      const comparison = comparisons.find((row) => row.nome.toLocaleLowerCase("pt-BR").includes(name.toLocaleLowerCase("pt-BR")));
+  const named = [
+    "Luan Nicolas Sinesio Crisostomo", "João Paulo Maciel Sousa", "Gustavo Duarte Pinheiro Silva",
+    "Leandro Dos Santos Pereira", "Miguel Carneiro Nunes", "Tatyanna Lima de Freitas",
+    "Adrilene Azevedo da Silva", "Luiz Fernando de Medeiros Paiva Moura", "Cleber Rodrigues Souza",
+    "Gabrielly de Oliveira Medeiros",
+  ].map((name) => {
+      const comparison = comparisons.find((row) => normalizeName(row.nome) === normalizeName(name));
       if (!comparison) return { nome: name, encontrado: false };
       const profile = (profiles as Profile[]).find((item) => item.id === comparison.id) as Profile;
       return { ...comparison,

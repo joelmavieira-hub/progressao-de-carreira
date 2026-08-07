@@ -5,7 +5,7 @@ export const SENIORITY_ORDER = [
   "Júnior 1", "Júnior 2", "Júnior 3", "Pleno 1", "Pleno 2", "Pleno 3", "Sênior 1", "Sênior 2", "Sênior 3",
 ] as const;
 
-export type GoalCategory = "Meta 1" | "Meta 2" | "Meta 3" | "Nenhuma meta" | "Sem presença";
+export type GoalCategory = "Meta 1" | "Meta 2" | "Meta 3" | "Nenhuma meta" | "Sem presença" | "Sem registro";
 
 export interface AnalyticsFilters {
   competence: string;
@@ -29,6 +29,17 @@ export interface PromotionView {
   result: ColaboradorResultado;
   previousSeniority: string;
   nextSeniority: string;
+}
+
+export interface MonthlyGoalEvolution {
+  competence: string;
+  "Atingiram meta": number;
+  "Meta 1": number;
+  "Meta 2": number;
+  "Meta 3": number;
+  "Nenhuma meta": number;
+  "Sem presença": number;
+  "Sem registro": number;
 }
 
 export function normalizeSearch(value: string | null | undefined): string {
@@ -60,6 +71,27 @@ export function filterResultsByProfiles(results: readonly ColaboradorResultado[]
   return results.filter((row) => row.colaborador_id !== null && ids.has(row.colaborador_id));
 }
 
+/**
+ * Filters monthly facts using the values that were true in each competence.
+ * Status and search remain profile-level filters; position, squad and seniority
+ * are evaluated from the historical result instead of the current profile.
+ */
+export function filterHistoricalResults(
+  results: readonly ColaboradorResultado[],
+  profileScope: readonly PerfilComHistorico[],
+  filters: AnalyticsFilters,
+): ColaboradorResultado[] {
+  const ids = new Set(profileScope.map(({ perfil }) => perfil.id));
+  return results.filter((row) => {
+    if (!row.colaborador_id || !ids.has(row.colaborador_id)) return false;
+    if (filters.squad !== "todos" && row.squad !== filters.squad) return false;
+    if (filters.position !== "todos" && normalizeSearch(row.posicao) !== normalizeSearch(filters.position)) return false;
+    const historicalSeniority = row.senioridade_informada ?? row.senioridade;
+    if (filters.seniority !== "todos" && historicalSeniority !== filters.seniority) return false;
+    return true;
+  });
+}
+
 export function calculateCoverage(profiles: readonly PerfilComHistorico[], competence: string): CoverageSummary {
   const rows = profiles.map(({ resultados }) => resultados.find((row) => row.competencia === competence)).filter(Boolean) as ColaboradorResultado[];
   const absent = rows.filter((row) => row.meta_alcancada === "Sem presença").length;
@@ -81,20 +113,45 @@ export function distributeSeniority(profiles: readonly PerfilComHistorico[]) {
 }
 
 function goalCategory(value: string | null): GoalCategory {
-  if (value === "Meta 1" || value === "Meta 2" || value === "Meta 3" || value === "Sem presença") return value;
-  return "Nenhuma meta";
+  if (value === "Meta 1" || value === "Meta 2" || value === "Meta 3" || value === "Nenhuma meta" || value === "Sem presença" || value === "Sem registro") return value;
+  return value === null ? "Sem registro" : "Nenhuma meta";
 }
 
-export function groupGoalsByCompetence(results: readonly ColaboradorResultado[]) {
-  const categories: GoalCategory[] = ["Meta 1", "Meta 2", "Meta 3", "Nenhuma meta", "Sem presença"];
+function latestDistinctResults(rows: readonly ColaboradorResultado[]): ColaboradorResultado[] {
+  const byPerson = new Map<string, ColaboradorResultado>();
+  for (const row of rows) {
+    if (!row.colaborador_id) continue;
+    const current = byPerson.get(row.colaborador_id);
+    if (!current || `${row.updated_at}|${row.id}` > `${current.updated_at}|${current.id}`) {
+      byPerson.set(row.colaborador_id, row);
+    }
+  }
+  return [...byPerson.values()];
+}
+
+/**
+ * Builds the monthly goal evolution by distinct collaborator.
+ * "Atingiram meta" includes Meta 1, Meta 2 and Meta 3, and excludes
+ * Nenhuma meta, Sem presença and Sem registro.
+ */
+export function groupGoalsByCompetence(results: readonly ColaboradorResultado[]): MonthlyGoalEvolution[] {
+  const categories: GoalCategory[] = ["Meta 1", "Meta 2", "Meta 3", "Nenhuma meta", "Sem presença", "Sem registro"];
   return listCompetences(results).map((competence) => {
-    const rows = results.filter((row) => row.competencia === competence);
-    return Object.assign({ competence }, Object.fromEntries(categories.map((category) => [category, rows.filter((row) => goalCategory(row.meta_alcancada) === category).length])) as Record<GoalCategory, number>);
+    const rows = latestDistinctResults(results.filter((row) => row.competencia === competence));
+    const grouped = Object.fromEntries(categories.map((category) => [
+      category,
+      rows.filter((row) => goalCategory(row.meta_alcancada) === category).length,
+    ])) as Record<GoalCategory, number>;
+    return {
+      competence,
+      "Atingiram meta": grouped["Meta 1"] + grouped["Meta 2"] + grouped["Meta 3"],
+      ...grouped,
+    };
   });
 }
 
 export function groupPromotionsByCompetence(results: readonly ColaboradorResultado[]) {
-  return listCompetences(results).map((competence) => ({ competence, total: results.filter((row) => row.competencia === competence && row.recebeu_promocao).length }));
+  return listCompetences(results).map((competence) => ({ competence, total: latestDistinctResults(results.filter((row) => row.competencia === competence && row.recebeu_promocao)).length }));
 }
 
 export function countUniquePromoted(results: readonly ColaboradorResultado[]): number {

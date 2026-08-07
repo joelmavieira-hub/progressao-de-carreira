@@ -107,7 +107,24 @@ export function calcularResumo(
 export function montarDadosDeProgressao(
   perfis: ColaboradorPerfil[], resultados: ColaboradorResultado[],
 ): CareerProgressionData {
-  return { perfis, resultados, perfisComHistorico: relacionarPerfisEResultados(perfis, resultados), resumo: calcularResumo(perfis, resultados) };
+  const perfisOperacionais = perfis.filter(isOperationalProfile);
+  const idsOperacionais = new Set(perfisOperacionais.map((perfil) => perfil.id));
+  const resultadosOperacionais = resultados.filter((resultado) => resultado.colaborador_id !== null && idsOperacionais.has(resultado.colaborador_id));
+  return {
+    perfis, resultados,
+    perfisComHistorico: relacionarPerfisEResultados(perfis, resultados),
+    resumo: calcularResumo(perfis, resultados),
+    perfisOperacionais, resultadosOperacionais,
+    perfisOperacionaisComHistorico: relacionarPerfisEResultados(perfisOperacionais, resultadosOperacionais),
+    resumoOperacional: calcularResumo(perfisOperacionais, resultadosOperacionais),
+  };
+}
+
+export function isOperationalProfile(perfil: ColaboradorPerfil): boolean {
+  const position = foldForSearch(perfil.posicao_atual);
+  return (position === "sdr" || position === "closer")
+    && !isSquadSaiu(perfil.squad_atual)
+    && foldForSearch(perfil.jornada_atual) !== "saiu";
 }
 
 export function filtrarPerfis(

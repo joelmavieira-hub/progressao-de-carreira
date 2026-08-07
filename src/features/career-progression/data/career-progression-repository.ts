@@ -6,7 +6,7 @@ import type { CareerProgressionData, ColaboradorPerfil, ColaboradorResultado } f
 
 export const RESULTS_PAGE_SIZE = 500;
 const MAX_RESULT_PAGES = 10_000;
-const PROFILE_COLUMNS = "id,nome_colaborador,nome_normalizado,posicao_atual,squad_atual,senioridade_atual,progresso_meta3,ativo,created_at,updated_at";
+const PROFILE_COLUMNS = "id,nome_colaborador,nome_normalizado,posicao_atual,squad_atual,jornada_atual,senioridade_atual,progresso_meta3,ativo,created_at,updated_at";
 const RESULT_COLUMNS = "id,colaborador_id,nome_colaborador,posicao,squad,competencia,meta_alcancada,senioridade,senioridade_informada,recebeu_promocao,origem,mes_referencia,created_at,updated_at";
 type ReadClient = SupabaseClient<Database>;
 

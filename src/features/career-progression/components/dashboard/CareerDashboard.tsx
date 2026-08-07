@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { derivarOpcoesDeFiltro } from "../../domain";
 import {
-  calculateCoverage, countUniquePromoted, distributeCycle, distributeSeniority, filterProfiles, filterResultsByProfiles,
+  calculateCoverage, countUniquePromoted, distributeCycle, distributeSeniority, filterHistoricalResults, filterProfiles,
   findNearPromotion, findRecentPromotions, groupGoalsByCompetence, groupProgressBySquad,
   groupPromotionsByCompetence, latestDatabaseUpdate, listCompetences, type AnalyticsFilters,
 } from "../../domain/analytics";
@@ -16,8 +16,9 @@ import { MainMetrics } from "./MainMetrics";
 
 const defaults = (competence: string): AnalyticsFilters => ({ competence, status: "ativos", squad: "todos", position: "todos", seniority: "todos", search: "" });
 
-export function CareerDashboard({ perfis, resultados, perfisComHistorico, isFetching, lastUpdatedAt, onRefresh, onNavigate, initialFilters }: {
+export function CareerDashboard({ perfis, resultados, perfisComHistorico, historicalProfileCount, historicalResultCount, historicalInactiveCount, isFetching, lastUpdatedAt, onRefresh, onNavigate, initialFilters }: {
   perfis: ColaboradorPerfil[]; resultados: ColaboradorResultado[]; perfisComHistorico: PerfilComHistorico[];
+  historicalProfileCount?: number; historicalResultCount?: number; historicalInactiveCount?: number;
   isFetching: boolean; lastUpdatedAt: Date | null; onRefresh: () => void; onNavigate: (focus: "meta3" | "promoted") => void;
   initialFilters?: Partial<AnalyticsFilters>;
 }) {
@@ -30,9 +31,14 @@ export function CareerDashboard({ perfis, resultados, perfisComHistorico, isFetc
   const options = useMemo(() => derivarOpcoesDeFiltro(perfis), [perfis]);
   const filtered = useMemo(() => filterProfiles(perfisComHistorico, filters), [perfisComHistorico, filters]);
   const withoutStatus = useMemo(() => filterProfiles(perfisComHistorico, { ...filters, status: "todos" }), [perfisComHistorico, filters]);
-  const filteredResults = useMemo(() => filterResultsByProfiles(resultados, filtered), [resultados, filtered]);
+  const historicalProfileScope = useMemo(() => filterProfiles(perfisComHistorico, {
+    ...filters, squad: "todos", position: "todos", seniority: "todos",
+  }), [perfisComHistorico, filters]);
+  const historicalFilteredResults = useMemo(() => filterHistoricalResults(
+    resultados, historicalProfileScope, filters,
+  ), [resultados, historicalProfileScope, filters]);
   const coverage = useMemo(() => calculateCoverage(filtered, filters.competence), [filtered, filters.competence]);
-  const promotionResults = filteredResults.filter((row) => row.recebeu_promocao);
+  const promotionResults = historicalFilteredResults.filter((row) => row.recebeu_promocao);
   const databaseUpdated = latestDatabaseUpdate(perfis, resultados);
   const databaseDate = databaseUpdated ? new Date(databaseUpdated) : lastUpdatedAt;
   const competenceRecords = resultados.filter((row) => row.competencia === filters.competence).length;
@@ -42,13 +48,15 @@ export function CareerDashboard({ perfis, resultados, perfisComHistorico, isFetc
     {filtered.length === 0 ? <div role="status" className="rounded-2xl border border-dashed bg-card p-10 text-center"><p className="font-semibold">Nenhum colaborador encontrado.</p>
       <p className="mt-1 text-sm text-muted-foreground">Ajuste os filtros para recuperar a visualização.</p><Button className="mt-4" variant="outline" onClick={() => setFilters(defaults(latest))}>Limpar filtros</Button></div> : <>
       <div className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_minmax(250px,1.15fr)]"><MainMetrics
-        active={withoutStatus.filter(({ perfil }) => perfil.ativo).length} inactive={withoutStatus.filter(({ perfil }) => !perfil.ativo).length}
+        active={withoutStatus.filter(({ perfil }) => perfil.ativo).length}
+        inactive={historicalInactiveCount ?? withoutStatus.filter(({ perfil }) => !perfil.ativo).length}
         promotionRecords={promotionResults.length} promotedPeople={countUniquePromoted(promotionResults)} nearPromotion={findNearPromotion(filtered).length}
         coverage={coverage} competence={filters.competence} />
-        <DatabaseSummaryCard totalProfiles={perfis.length} competenceRecords={competenceRecords} competence={filters.competence}
+        <DatabaseSummaryCard historicalProfiles={historicalProfileCount ?? perfis.length} historicalResults={historicalResultCount ?? resultados.length}
+          operationalProfiles={perfis.length} competenceRecords={competenceRecords} competence={filters.competence}
           updatedAt={databaseDate} isFetching={isFetching} onRefresh={onRefresh} /></div>
-      <DashboardCharts cycle={distributeCycle(filtered)} seniority={distributeSeniority(filtered)} monthlyGoals={groupGoalsByCompetence(filteredResults)}
-        promotions={groupPromotionsByCompetence(filteredResults)} squads={groupProgressBySquad(filtered)} />
+      <DashboardCharts cycle={distributeCycle(filtered)} seniority={distributeSeniority(filtered)} monthlyGoals={groupGoalsByCompetence(historicalFilteredResults)}
+        promotions={groupPromotionsByCompetence(historicalFilteredResults)} squads={groupProgressBySquad(filtered)} />
       <DashboardLists nearPromotion={findNearPromotion(filtered)} recentPromotions={findRecentPromotions(filtered)}
         onOpen={setSelected} onNavigate={onNavigate} />
     </>}

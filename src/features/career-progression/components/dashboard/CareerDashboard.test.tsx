@@ -13,6 +13,19 @@ const result = (id: string, collaboratorId: string, goal: string): ColaboradorRe
   recebeu_promocao: false, origem: "google_sheets_progressao", mes_referencia: "2026-08-01", created_at: "2026-08-01T00:00:00Z", updated_at: "2026-08-01T00:00:00Z" });
 
 describe("CareerDashboard", () => {
+  it("conta a pessoa uma vez mesmo com oito resultados e rotula os dois escopos", () => {
+    const perfis = [profile("1", "Ana", true)];
+    const resultados = Array.from({ length: 8 }, (_, index) => ({
+      ...result(`r${index + 1}`, "1", "Meta 3"), competencia: `2026-${String(index + 1).padStart(2, "0")}-01`,
+    }));
+    render(<TooltipProvider><CareerDashboard perfis={perfis} resultados={resultados} perfisComHistorico={relacionarPerfisEResultados(perfis, resultados)}
+      historicalProfileCount={73} historicalResultCount={584} historicalInactiveCount={31} isFetching={false} lastUpdatedAt={null} onRefresh={vi.fn()} onNavigate={vi.fn()} /></TooltipProvider>);
+    const activeCard = screen.getByText("Colaboradores ativos").closest("div");
+    expect(activeCard).toHaveTextContent("1");
+    expect(activeCard).toHaveTextContent("31 inativos");
+    expect(screen.getByTestId("database-summary-card")).toHaveTextContent("Perfis na base histórica73Resultados na base histórica584Perfis no escopo operacional1");
+  });
+
   it("aplica filtros e Limpar filtros restaura Ativos", () => {
     const perfis = [profile("1", "Ana Ativa", true), profile("2", "Bia Inativa", false)];
     const resultados = [result("r1", "1", "Meta 3"), result("r2", "2", "Sem presença")];
@@ -31,8 +44,8 @@ describe("CareerDashboard", () => {
       isFetching={false} lastUpdatedAt={null} onRefresh={vi.fn()} onNavigate={vi.fn()} /></TooltipProvider>);
     expect(screen.getByTestId("coverage-card")).toHaveTextContent("1 sem presença");
     const monthly = screen.getByTestId("monthly-goals-chart");
-    expect(within(monthly).queryByText("Sem presença")).not.toBeInTheDocument();
-    expect(within(monthly).getByText("Nenhuma meta")).toBeInTheDocument();
+    expect(within(monthly).getByText("Colaboradores distintos que alcançaram Meta 1, Meta 2 ou Meta 3 em cada competência")).toBeInTheDocument();
+    expect(within(monthly).getByText("Sem presença, Sem registro e Nenhuma meta não entram no atingimento.")).toBeInTheDocument();
   });
 
   it("mantém somente os dois painéis responsivos e suas ações", () => {
