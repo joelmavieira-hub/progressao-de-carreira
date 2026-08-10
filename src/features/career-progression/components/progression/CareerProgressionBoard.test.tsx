@@ -49,4 +49,113 @@ describe("CareerProgressionBoard", () => {
     expect(screen.getByRole("region", { name: "Resumo operacional" }).children).toHaveLength(3);
     expect(container.querySelector("[draggable='true']")).toBeNull();
   });
+  it("mantém SDR -> Closer somente em Promovidos no período", () => {
+    const miguel = {
+      ...profile(
+        "miguel",
+        "Miguel Carneiro Nunes",
+        1,
+      ),
+      posicao_atual: "Closer",
+      squad_atual: "Urso",
+    };
+
+    const junho = {
+      ...result(
+        "miguel-jun",
+        "miguel",
+      ),
+      competencia: "2026-06-01",
+      mes_referencia: "2026-06-01",
+      posicao: "SDR",
+      squad: "Urso",
+      meta_alcancada: "Meta 1",
+      senioridade: "Júnior 1",
+      senioridade_informada: "Júnior 1",
+      recebeu_promocao: false,
+      created_at: "2026-06-01T00:00:00Z",
+      updated_at: "2026-06-01T00:00:00Z",
+    };
+
+    const julho = {
+      ...result(
+        "miguel-jul",
+        "miguel",
+      ),
+      competencia: "2026-07-01",
+      mes_referencia: "2026-07-01",
+      posicao: "Closer",
+      squad: "Urso",
+      meta_alcancada: "Meta 3",
+      senioridade: "Júnior 1",
+      senioridade_informada: "Júnior 1",
+      recebeu_promocao: false,
+      created_at: "2026-07-01T00:00:00Z",
+      updated_at: "2026-07-01T00:00:00Z",
+    };
+
+    const perfis = [miguel];
+    const resultados = [junho, julho];
+
+    render(
+      <CareerProgressionBoard
+        perfis={perfis}
+        resultados={resultados}
+        perfisComHistorico={relacionarPerfisEResultados(
+          perfis,
+          resultados,
+        )}
+      />,
+    );
+
+    const zeroThirdColumn = screen
+      .getByRole("heading", { name: "0/3" })
+      .closest("section");
+
+    const oneThirdColumn = screen
+      .getByRole("heading", { name: "1/3" })
+      .closest("section");
+
+    const twoThirdColumn = screen
+      .getByRole("heading", { name: "2/3" })
+      .closest("section");
+
+    const promotedColumn = screen
+      .getByRole("heading", {
+        name: "Promovidos no período",
+      })
+      .closest("section");
+
+    if (
+      !zeroThirdColumn ||
+      !oneThirdColumn ||
+      !twoThirdColumn ||
+      !promotedColumn
+    ) {
+      throw new Error(
+        "Colunas da Progressão não encontradas.",
+      );
+    }
+
+    expect(zeroThirdColumn)
+      .not.toHaveTextContent("Miguel Carneiro Nunes");
+
+    expect(oneThirdColumn)
+      .not.toHaveTextContent("Miguel Carneiro Nunes");
+
+    expect(twoThirdColumn)
+      .not.toHaveTextContent("Miguel Carneiro Nunes");
+
+    expect(promotedColumn)
+      .toHaveTextContent("Miguel Carneiro Nunes");
+
+    expect(promotedColumn)
+      .toHaveTextContent("SDR");
+
+    expect(promotedColumn)
+      .toHaveTextContent("Closer");
+
+    expect(promotedColumn)
+      .not.toHaveTextContent("Júnior 1 → Júnior 1");
+  });
 });
