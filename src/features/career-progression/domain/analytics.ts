@@ -1,5 +1,6 @@
 import { isSquadSaiu } from "../domain";
 import type { ColaboradorPerfil, ColaboradorResultado, PerfilComHistorico, ProfileStatusFilter } from "../types";
+import { detectRoleTransitionPromotions, type CareerPromotionType } from "./promotions";
 
 export const SENIORITY_ORDER = [
   "Júnior 1", "Júnior 2", "Júnior 3", "Pleno 1", "Pleno 2", "Pleno 3", "Sênior 1", "Sênior 2", "Sênior 3",
@@ -25,10 +26,20 @@ export interface CoverageSummary {
 }
 
 export interface PromotionView {
+  promotionType: CareerPromotionType;
   profile: PerfilComHistorico;
   result: ColaboradorResultado;
   previousSeniority: string;
   nextSeniority: string;
+  fromPosition: string | null;
+  toPosition: string | null;
+}
+
+export interface CareerPromotionByCompetence {
+  competence: string;
+  total: number;
+  seniority: number;
+  roleTransition: number;
 }
 
 export interface MonthlyGoalEvolution {
@@ -158,6 +169,137 @@ export function countUniquePromoted(results: readonly ColaboradorResultado[]): n
   return new Set(results.filter((row) => row.recebeu_promocao && row.colaborador_id).map((row) => row.colaborador_id)).size;
 }
 
+function promotionEventKey(promotion: PromotionView): string {
+  return [
+    promotion.profile.perfil.id,
+    promotion.result.competencia ?? promotion.result.id,
+  ].join("|");
+}
+
+/**
+ * Constrói a visão unificada de promoções.
+ *
+ * Regras:
+ * - promoção de senioridade continua vindo de recebeu_promocao;
+ * - SDR -> Closer é promoção de função;
+ * - se os dois sinais ocorrerem para a mesma pessoa na mesma
+ *   competência, a promoção de função prevalece e conta apenas uma vez.
+ */
+export function buildCareerPromotions(
+  profiles: readonly PerfilComHistorico[],
+  competence?: string,
+): PromotionView[] {
+  const seniorityPromotions: PromotionView[] = profiles.flatMap((profile) =>
+    profile.resultados
+      .filter(
+        (row) =>
+          row.recebeu_promocao &&
+          (!competence || row.competencia === competence),
+      )
+      .map((result) => ({
+        promotionType: "seniority" as const,
+        profile,
+        result,
+        previousSeniority: result.senioridade ?? "Não informada",
+        nextSeniority: nextSeniority(result.senioridade),
+        fromPosition: result.posicao,
+        toPosition: result.posicao,
+      })),
+  );
+
+  const rolePromotions: PromotionView[] =
+    detectRoleTransitionPromotions(profiles, competence).map(
+      (promotion) => ({
+        promotionType: "role_transition" as const,
+        profile: promotion.profile,
+        result: promotion.result,
+        previousSeniority: promotion.previousSeniority ?? "Não informada",
+        nextSeniority: promotion.nextSeniority ?? "Não informada",
+        fromPosition: promotion.fromPosition,
+        toPosition: promotion.toPosition,
+      }),
+    );
+
+  const byPersonAndCompetence = new Map<string, PromotionView>();
+
+  for (const promotion of seniorityPromotions) {
+    byPersonAndCompetence.set(
+      promotionEventKey(promotion),
+      promotion,
+    );
+  }
+
+  // A transição de função sobrescreve o sinal de senioridade
+  // quando ambos aparecem na mesma competência.
+  for (const promotion of rolePromotions) {
+    byPersonAndCompetence.set(
+      promotionEventKey(promotion),
+      promotion,
+    );
+  }
+
+  return [...byPersonAndCompetence.values()].sort(
+    (a, b) =>
+      (b.result.competencia ?? "").localeCompare(
+        a.result.competencia ?? "",
+      ) ||
+      b.result.updated_at.localeCompare(a.result.updated_at) ||
+      a.profile.perfil.nome_normalizado.localeCompare(
+        b.profile.perfil.nome_normalizado,
+        "pt-BR",
+      ) ||
+      a.result.id.localeCompare(b.result.id),
+  );
+}
+
+export function filterCareerPromotions(
+  promotions: readonly PromotionView[],
+  filters: Pick<AnalyticsFilters, "squad" | "position" | "seniority">,
+): PromotionView[] {
+  return promotions.filter(({ result }) => {
+    if (filters.squad !== "todos" && result.squad !== filters.squad) return false;
+    if (filters.position !== "todos" && normalizeSearch(result.posicao) !== normalizeSearch(filters.position)) return false;
+    const historicalSeniority =
+      result.senioridade_informada ?? result.senioridade;
+    if (filters.seniority !== "todos" && historicalSeniority !== filters.seniority) return false;
+    return true;
+  });
+}
+
+export function countUniqueCareerPromoted(
+  promotions: readonly PromotionView[],
+): number {
+  return new Set(
+    promotions.map(({ profile }) => profile.perfil.id),
+  ).size;
+}
+
+export function groupCareerPromotionsByCompetence(
+  results: readonly ColaboradorResultado[],
+  promotions: readonly PromotionView[],
+): CareerPromotionByCompetence[] {
+  return listCompetences(results).map((competence) => {
+    const events = promotions.filter(
+      ({ result }) => result.competencia === competence,
+    );
+
+    const seniority = events.filter(
+      ({ promotionType }) => promotionType === "seniority",
+    ).length;
+
+    const roleTransition = events.filter(
+      ({ promotionType }) => promotionType === "role_transition",
+    ).length;
+
+    return {
+      competence,
+      total: events.length,
+      seniority,
+      roleTransition,
+    };
+  });
+}
+
 export function groupProgressBySquad(profiles: readonly PerfilComHistorico[]) {
   const squads = [...new Set(profiles.map(({ perfil }) => perfil.squad_atual).filter((squad): squad is string => Boolean(squad) && !isSquadSaiu(squad)))];
   return squads.map((squad) => {
@@ -182,16 +324,7 @@ export function nextSeniority(current: string | null): string {
 }
 
 export function findRecentPromotions(profiles: readonly PerfilComHistorico[], competence?: string): PromotionView[] {
-  return profiles.flatMap((profile) => profile.resultados
-    .filter((row) => row.recebeu_promocao && (!competence || row.competencia === competence))
-    .map((result) => ({
-      profile, result,
-      previousSeniority: result.senioridade ?? "Não informada",
-      nextSeniority: nextSeniority(result.senioridade),
-    })))
-    .sort((a, b) => (b.result.competencia ?? "").localeCompare(a.result.competencia ?? "")
-      || b.result.updated_at.localeCompare(a.result.updated_at)
-      || a.result.id.localeCompare(b.result.id));
+  return buildCareerPromotions(profiles, competence);
 }
 
 export function buildCycleColumns(profiles: readonly PerfilComHistorico[]) {

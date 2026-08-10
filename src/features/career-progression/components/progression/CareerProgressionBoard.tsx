@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { derivarOpcoesDeFiltro, formatarSquadAtual } from "../../domain";
 import {
-  buildCycleColumns, countUniquePromoted, filterProfiles, filterResultsByProfiles, findRecentPromotions,
+  buildCareerPromotions, buildCycleColumns, countUniqueCareerPromoted, filterProfiles,
   listCompetences, type AnalyticsFilters, type PromotionView,
 } from "../../domain/analytics";
 import type { ColaboradorPerfil, ColaboradorResultado, PerfilComHistorico } from "../../types";
@@ -31,14 +31,38 @@ export function CareerProgressionBoard({ perfis, resultados, perfisComHistorico,
 
   const options = useMemo(() => derivarOpcoesDeFiltro(perfis), [perfis]);
   const filtered = useMemo(() => filterProfiles(perfisComHistorico, filters), [perfisComHistorico, filters]);
-  const filteredResults = useMemo(() => filterResultsByProfiles(resultados, filtered), [resultados, filtered]);
-  const columns = useMemo(() => buildCycleColumns(filtered), [filtered]);
-  const promotions = useMemo(() => findRecentPromotions(filtered, filters.competence), [filtered, filters.competence]);
-  const promotionRows = filteredResults.filter((row) => row.recebeu_promocao && row.competencia === filters.competence);
+
+  // Promoção na competência selecionada tem prioridade
+  // sobre os estágios 0/3, 1/3 e 2/3.
+  const promotions = useMemo(
+    () => buildCareerPromotions(filtered, filters.competence),
+    [filtered, filters.competence],
+  );
+
+  const promotedIds = useMemo(
+    () => new Set(
+      promotions.map(({ profile }) => profile.perfil.id),
+    ),
+    [promotions],
+  );
+
+  // Quem foi promovido no período aparece exclusivamente
+  // em "Promovidos no período".
+  const cycleProfiles = useMemo(
+    () => filtered.filter(
+      ({ perfil }) => !promotedIds.has(perfil.id),
+    ),
+    [filtered, promotedIds],
+  );
+
+  const columns = useMemo(
+    () => buildCycleColumns(cycleProfiles),
+    [cycleProfiles],
+  );
 
   return <div className="space-y-5" data-testid="career-progression-board">
     <CareerFiltersBar filters={filters} competences={[...competences].reverse()} options={options} onChange={setFilters} onClear={() => setFilters(defaults(latest))} showSearch />
-    <OperationalSummary promoted={countUniquePromoted(promotionRows)} promotionRecords={promotionRows.length} near={columns.meta3.length} monitored={filtered.length} />
+    <OperationalSummary promoted={countUniqueCareerPromoted(promotions)} promotionRecords={promotions.length} near={columns.meta3.length} monitored={filtered.length} />
     {filtered.length === 0 ? <div role="status" className="rounded-2xl border border-dashed bg-card p-10 text-center"><p className="font-semibold">Nenhum colaborador corresponde aos filtros.</p>
       <Button variant="outline" className="mt-4" onClick={() => setFilters(defaults(latest))}>Limpar filtros</Button></div> :
       <div ref={boardRef} className="mx-auto w-full pb-3" aria-label="Quadro de progressão"><div data-testid="progression-columns" className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -79,10 +103,64 @@ function CycleColumn({ title, description, items, progress, competence, onOpen, 
 }
 
 function PromotionColumn({ items, onOpen }: { items: PromotionView[]; onOpen: (item: PerfilComHistorico) => void }) {
-  return <ColumnShell title="Promovidos no período" description="Registros da competência" count={items.length} tone="bg-emerald-50" dataColumn="promoted">{items.map(({ profile, result, previousSeniority, nextSeniority }) => <PersonCard key={result.id} item={profile} onOpen={onOpen} accent="green">
-    <p className="text-xs text-muted-foreground">{formatarSquadAtual(profile.perfil.squad_atual)} · {profile.perfil.posicao_atual ?? "Posição não informada"}</p>
-    <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700">{previousSeniority}<ArrowRight aria-hidden="true" className="h-4 w-4" />{nextSeniority}</p>
-    <p className="text-xs text-muted-foreground">{result.competencia ? formatarCompetencia(result.competencia) : "Competência não informada"}</p></PersonCard>)}</ColumnShell>;
+  return <ColumnShell
+    title="Promovidos no período"
+    description="Registros da competência"
+    count={items.length}
+    tone="bg-emerald-50"
+    dataColumn="promoted"
+  >
+    {items.map((promotion) => {
+      const {
+        profile,
+        result,
+        previousSeniority,
+        nextSeniority,
+      } = promotion;
+
+      const roleTransition =
+        promotion.promotionType === "role_transition";
+
+      const from = roleTransition
+        ? promotion.fromPosition ?? "SDR"
+        : previousSeniority;
+
+      const to = roleTransition
+        ? promotion.toPosition ?? "Closer"
+        : nextSeniority;
+
+      return <PersonCard
+        key={`${promotion.promotionType}-${result.id}`}
+        item={profile}
+        onOpen={onOpen}
+        accent="green"
+      >
+        <p className="text-xs text-muted-foreground">
+          {formatarSquadAtual(profile.perfil.squad_atual)}
+          {" · "}
+          {profile.perfil.posicao_atual ?? "Posição não informada"}
+        </p>
+
+        <p
+          className="flex items-center gap-2 text-sm font-semibold text-emerald-700"
+          aria-label={`${from} para ${to}`}
+        >
+          <span>{from}</span>
+          <ArrowRight
+            aria-hidden="true"
+            className="h-4 w-4"
+          />
+          <span>{to}</span>
+        </p>
+
+        <p className="text-xs text-muted-foreground">
+          {result.competencia
+            ? formatarCompetencia(result.competencia)
+            : "Competência não informada"}
+        </p>
+      </PersonCard>;
+    })}
+  </ColumnShell>;
 }
 
 function PersonCard({ item, onOpen, accent, children }: { item: PerfilComHistorico; onOpen: (item: PerfilComHistorico) => void; accent?: "green"; children: React.ReactNode }) {

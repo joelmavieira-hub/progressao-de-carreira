@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { relacionarPerfisEResultados } from "../domain";
 import type { ColaboradorPerfil, ColaboradorResultado, PerfilComHistorico } from "../types";
 import {
-  buildCycleColumns, calculateCoverage, countUniquePromoted, distributeCycle, distributeSeniority, filterHistoricalResults, filterProfiles,
-  findNearPromotion, findRecentPromotions, groupGoalsByCompetence, groupProgressBySquad,
-  groupPromotionsByCompetence, listCompetences, nextSeniority, normalizeSearch, type AnalyticsFilters,
+  buildCareerPromotions, buildCycleColumns, calculateCoverage, countUniqueCareerPromoted, countUniquePromoted,
+  distributeCycle, distributeSeniority, filterHistoricalResults, filterProfiles,
+  findNearPromotion, findRecentPromotions, groupCareerPromotionsByCompetence, groupGoalsByCompetence,
+  groupProgressBySquad, groupPromotionsByCompetence, listCompetences, nextSeniority, normalizeSearch, type AnalyticsFilters,
 } from "./analytics";
 
 const profile = (id: string, overrides: Partial<ColaboradorPerfil> = {}): ColaboradorPerfil => ({
@@ -98,4 +99,47 @@ describe("analytics", () => {
     expect(filterProfiles(data, filters({ search: " jose   alvaro ", status: "ativos", squad: "Lobo", position: "Closer", seniority: "Pleno 1" }))).toHaveLength(1);
   });
   it("calcula a transição visual pela escada oficial", () => { expect(nextSeniority("Júnior 3")).toBe("Pleno 1"); expect(nextSeniority("Sênior 3")).toBe("Sênior 3"); });
+
+  it("considera SDR -> Closer uma promoção e evita dupla contagem na mesma competência", () => {
+    const data = related([profile("miguel", { nome_colaborador: "Miguel", nome_normalizado: "miguel", posicao_atual: "Closer" })], [
+      result("miguel-jun", "miguel", "2026-06-01", "Meta 1", false, { posicao: "SDR" }),
+      result("miguel-jul", "miguel", "2026-07-01", "Meta 3", true, { posicao: "Closer" }),
+    ]);
+
+    const promotions = buildCareerPromotions(data);
+
+    expect(promotions).toHaveLength(1);
+    expect(promotions[0].promotionType).toBe("role_transition");
+    expect(promotions[0].fromPosition).toBe("SDR");
+    expect(promotions[0].toPosition).toBe("Closer");
+    expect(countUniqueCareerPromoted(promotions)).toBe(1);
+  });
+
+  it("separa promoções de senioridade e para Closer no agrupamento mensal", () => {
+    const profiles = [
+      profile("miguel", { nome_colaborador: "Miguel", nome_normalizado: "miguel", posicao_atual: "Closer" }),
+      profile("ana"),
+    ];
+
+    const results = [
+      result("miguel-jun", "miguel", "2026-06-01", "Meta 1", false, { posicao: "SDR" }),
+      result("miguel-jul", "miguel", "2026-07-01", "Meta 1", false, { posicao: "Closer" }),
+      result("ana-jul", "ana", "2026-07-01", "Meta 3", true, { posicao: "SDR" }),
+    ];
+
+    const promotions = buildCareerPromotions(
+      related(profiles, results),
+    );
+
+    const july = groupCareerPromotionsByCompetence(
+      results,
+      promotions,
+    ).find((row) => row.competence === "2026-07-01");
+
+    expect(july).toMatchObject({
+      total: 2,
+      seniority: 1,
+      roleTransition: 1,
+    });
+  });
 });
