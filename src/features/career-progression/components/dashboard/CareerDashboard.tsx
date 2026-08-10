@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { derivarOpcoesDeFiltro } from "../../domain";
 import {
-  calculateCoverage, countUniquePromoted, distributeCycle, distributeSeniority, filterHistoricalResults, filterProfiles,
-  findNearPromotion, findRecentPromotions, groupGoalsByCompetence, groupProgressBySquad,
-  groupPromotionsByCompetence, latestDatabaseUpdate, listCompetences, type AnalyticsFilters,
+  buildCareerPromotions, calculateCoverage, countUniqueCareerPromoted, distributeCycle, distributeSeniority,
+  filterCareerPromotions, filterHistoricalResults, filterProfiles, findNearPromotion, groupCareerPromotionsByCompetence,
+  groupGoalsByCompetence, groupProgressBySquad, latestDatabaseUpdate, listCompetences, type AnalyticsFilters,
 } from "../../domain/analytics";
 import type { ColaboradorPerfil, ColaboradorResultado, PerfilComHistorico } from "../../types";
 import { CareerFiltersBar } from "../shared/CareerFiltersBar";
@@ -38,7 +38,20 @@ export function CareerDashboard({ perfis, resultados, perfisComHistorico, histor
     resultados, historicalProfileScope, filters,
   ), [resultados, historicalProfileScope, filters]);
   const coverage = useMemo(() => calculateCoverage(filtered, filters.competence), [filtered, filters.competence]);
-  const promotionResults = historicalFilteredResults.filter((row) => row.recebeu_promocao);
+  const careerPromotions = useMemo(
+    () => buildCareerPromotions(historicalProfileScope),
+    [historicalProfileScope],
+  );
+  const filteredPromotions = useMemo(
+    () => filterCareerPromotions(careerPromotions, filters),
+    [careerPromotions, filters],
+  );
+  const seniorityPromotionCount = filteredPromotions.filter(
+    ({ promotionType }) => promotionType === "seniority",
+  ).length;
+  const roleTransitionPromotionCount = filteredPromotions.filter(
+    ({ promotionType }) => promotionType === "role_transition",
+  ).length;
   const databaseUpdated = latestDatabaseUpdate(perfis, resultados);
   const databaseDate = databaseUpdated ? new Date(databaseUpdated) : lastUpdatedAt;
   const competenceRecords = resultados.filter((row) => row.competencia === filters.competence).length;
@@ -50,14 +63,18 @@ export function CareerDashboard({ perfis, resultados, perfisComHistorico, histor
       <div className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_minmax(250px,1.15fr)]"><MainMetrics
         active={withoutStatus.filter(({ perfil }) => perfil.ativo).length}
         inactive={historicalInactiveCount ?? withoutStatus.filter(({ perfil }) => !perfil.ativo).length}
-        promotionRecords={promotionResults.length} promotedPeople={countUniquePromoted(promotionResults)} nearPromotion={findNearPromotion(filtered).length}
+        promotionRecords={filteredPromotions.length}
+        promotedPeople={countUniqueCareerPromoted(filteredPromotions)}
+        seniorityPromotions={seniorityPromotionCount}
+        roleTransitionPromotions={roleTransitionPromotionCount}
+        nearPromotion={findNearPromotion(filtered).length}
         coverage={coverage} competence={filters.competence} />
         <DatabaseSummaryCard historicalProfiles={historicalProfileCount ?? perfis.length} historicalResults={historicalResultCount ?? resultados.length}
           operationalProfiles={perfis.length} competenceRecords={competenceRecords} competence={filters.competence}
           updatedAt={databaseDate} isFetching={isFetching} onRefresh={onRefresh} /></div>
       <DashboardCharts cycle={distributeCycle(filtered)} seniority={distributeSeniority(filtered)} monthlyGoals={groupGoalsByCompetence(historicalFilteredResults)}
-        promotions={groupPromotionsByCompetence(historicalFilteredResults)} squads={groupProgressBySquad(filtered)} />
-      <DashboardLists nearPromotion={findNearPromotion(filtered)} recentPromotions={findRecentPromotions(filtered)}
+        promotions={groupCareerPromotionsByCompetence(historicalFilteredResults, filteredPromotions)} squads={groupProgressBySquad(filtered)} />
+      <DashboardLists nearPromotion={findNearPromotion(filtered)} recentPromotions={filteredPromotions}
         onOpen={setSelected} onNavigate={onNavigate} />
     </>}
     <ProfileHistoryDialog item={selected} onClose={() => setSelected(null)} />

@@ -4,13 +4,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { formatarCompetencia } from "@/lib/progression";
 import type { CoverageSummary } from "../../domain/analytics";
 
-export function MainMetrics({ active, inactive, promotionRecords, promotedPeople, nearPromotion, coverage, competence }: {
-  active: number; inactive: number; promotionRecords: number; promotedPeople: number; nearPromotion: number; coverage: CoverageSummary; competence: string;
+export function MainMetrics({ active, inactive, promotionRecords, promotedPeople, seniorityPromotions, roleTransitionPromotions, nearPromotion, coverage, competence }: {
+  active: number; inactive: number; promotionRecords: number; promotedPeople: number; seniorityPromotions: number; roleTransitionPromotions: number; nearPromotion: number; coverage: CoverageSummary; competence: string;
 }) {
   return <>
     <MetricCard title="Colaboradores ativos" value={active} secondary={`${inactive} inativos`} icon={Users} />
-    <Tooltip><TooltipTrigger asChild><div className="h-full"><MetricCard title="Promoções" value={`${promotionRecords} promoções registradas`} secondary={`${promotedPeople} colaboradores promovidos`} icon={Award} /></div></TooltipTrigger>
-      <TooltipContent>Um colaborador pode ter mais de uma promoção registrada.</TooltipContent></Tooltip>
+    <Tooltip><TooltipTrigger asChild><div className="h-full"><MetricCard title="Promoções" value={`${promotionRecords} promoções registradas`} secondary={`${seniorityPromotions} de senioridade · ${roleTransitionPromotions} para Closer`} icon={Award} /></div></TooltipTrigger>
+      <TooltipContent>{promotedPeople} colaboradores promovidos. Uma pessoa pode ter mais de uma promoção registrada.</TooltipContent></Tooltip>
     <MetricCard title="Progresso 2/3" value={nearPromotion} secondary="colaboradores a uma Meta 3 da promoção" icon={Target} />
     <Card data-testid="coverage-card" className="h-full"><CardContent className="flex h-full min-h-44 items-center gap-3 p-4"><div className="relative grid h-20 w-20 shrink-0 place-items-center rounded-full"
       style={{ background: `conic-gradient(hsl(var(--primary)) ${coverage.presentPercentage}%, hsl(var(--muted)) 0)` }} aria-label={`${coverage.presentPercentage}% com presença`}>

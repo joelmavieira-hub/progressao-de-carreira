@@ -8,7 +8,7 @@ interface DashboardChartsProps {
   cycle: Array<{ progress: number; total: number }>;
   seniority: Array<{ seniority: string; total: number }>;
   monthlyGoals: MonthlyGoalEvolution[];
-  promotions: Array<{ competence: string; total: number }>;
+  promotions: Array<{ competence: string; total: number; seniority: number; roleTransition: number }>;
   squads: Array<{ squad: string; meta1: number; meta2: number; meta3: number; total: number }>;
 }
 
@@ -87,11 +87,21 @@ export function DashboardCharts({ cycle, seniority, monthlyGoals, promotions, sq
       <p className="mt-2 text-center text-xs text-muted-foreground">Sem presença, Sem registro e Nenhuma meta não entram no atingimento.</p>
     </ChartCard>
 
-    <ChartCard title="Promoções por competência" description="Quantidade de registros de promoção por mês" testId="promotions-by-competence-chart" primaryColor={DASHBOARD_CHART_COLORS.primary}>
-      <ResponsiveContainer width="100%" height={270}><BarChart data={promotionData} margin={{ top: 20 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="competenceLabel" /><YAxis allowDecimals={false} /><Tooltip />
-        <Bar dataKey="total" name="Promoções" fill={DASHBOARD_CHART_COLORS.primary} radius={[7, 7, 0, 0]}><LabelList dataKey="total" position="top" /></Bar></BarChart></ResponsiveContainer>
+    <ChartCard title="Promoções por competência" description="Promoções de senioridade e mudanças de SDR para Closer por competência" testId="promotions-by-competence-chart" primaryColor={DASHBOARD_CHART_COLORS.primary}>
+      <ResponsiveContainer width="100%" height={270}>
+        <BarChart data={promotionData} margin={{ top: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="competenceLabel" />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Legend />
+          <Bar stackId="promotions" dataKey="seniority" name="Senioridade" fill={DASHBOARD_CHART_COLORS.medium} />
+          <Bar stackId="promotions" dataKey="roleTransition" name="Para Closer" fill={DASHBOARD_CHART_COLORS.dark} radius={[7, 7, 0, 0]}>
+            <LabelList dataKey="total" position="top" />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
     </ChartCard>
-
     <ChartCard title="Progressão por squad" description="Squads operacionais distribuídos por etapa" testId="squad-progress-chart">
       {squads.length === 0 ? <ChartEmpty /> : <ResponsiveContainer width="100%" height={Math.max(270, squads.length * 42)}><BarChart data={squads} layout="vertical" margin={{ left: 8, right: 20 }}><CartesianGrid strokeDasharray="3 3" horizontal={false} /><XAxis type="number" allowDecimals={false} /><YAxis type="category" dataKey="squad" width={90} /><Tooltip /><Legend />
         <Bar stackId="cycle" dataKey="meta1" name="0/3" fill={DASHBOARD_CHART_COLORS.light} /><Bar stackId="cycle" dataKey="meta2" name="1/3" fill={DASHBOARD_CHART_COLORS.medium} /><Bar stackId="cycle" dataKey="meta3" name="2/3" fill={DASHBOARD_CHART_COLORS.dark} radius={[0, 6, 6, 0]} /></BarChart></ResponsiveContainer>}

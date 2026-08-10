@@ -67,4 +67,56 @@ describe("CareerDashboard", () => {
     expect(onNavigate).toHaveBeenNthCalledWith(1, "meta3");
     expect(onNavigate).toHaveBeenNthCalledWith(2, "promoted");
   });
+
+  it("inclui SDR -> Closer no card, gráfico e promovidos recentemente sem duplicar a promoção", () => {
+    const miguel = { ...profile("miguel", "Miguel", true), posicao_atual: "Closer" };
+
+    const june = {
+      ...result("miguel-jun", "miguel", "Meta 1"),
+      competencia: "2026-06-01",
+      mes_referencia: "2026-06-01",
+      posicao: "SDR",
+      created_at: "2026-06-01T00:00:00Z",
+      updated_at: "2026-06-01T00:00:00Z",
+    };
+
+    const july = {
+      ...result("miguel-jul", "miguel", "Meta 3"),
+      competencia: "2026-07-01",
+      mes_referencia: "2026-07-01",
+      posicao: "Closer",
+      recebeu_promocao: true,
+      created_at: "2026-07-01T00:00:00Z",
+      updated_at: "2026-07-01T00:00:00Z",
+    };
+
+    const perfis = [miguel];
+    const resultados = [june, july];
+
+    render(
+      <TooltipProvider>
+        <CareerDashboard
+          perfis={perfis}
+          resultados={resultados}
+          perfisComHistorico={relacionarPerfisEResultados(perfis, resultados)}
+          isFetching={false}
+          lastUpdatedAt={null}
+          onRefresh={vi.fn()}
+          onNavigate={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("1 promoções registradas")).toBeInTheDocument();
+    expect(screen.getByText("0 de senioridade · 1 para Closer")).toBeInTheDocument();
+
+    const recent = screen.getByTestId("recent-promotions-list");
+    expect(recent).toHaveTextContent("Miguel");
+    expect(recent).toHaveTextContent("SDR → Closer");
+    expect(recent).toHaveTextContent("Promoção de função");
+
+    expect(screen.getByTestId("promotions-by-competence-chart")).toHaveTextContent(
+      "Promoções de senioridade e mudanças de SDR para Closer por competência",
+    );
+  });
 });

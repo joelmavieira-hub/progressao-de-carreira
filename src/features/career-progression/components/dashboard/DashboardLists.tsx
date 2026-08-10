@@ -19,8 +19,21 @@ export function DashboardLists({ nearPromotion, recentPromotions, onOpen, onNavi
         detail={`${formatarSquadAtual(item.perfil.squad_atual)} · ${item.perfil.senioridade_atual ?? "Não informada"}`} badge={formatarEtapaProgresso(2)} />)}
     </ListCard>
     <ListCard title="Promovidos recentemente" icon={Award} action={() => onNavigate("promoted")} testId="recent-promotions-list">
-      {recentPromotions.length === 0 ? <Empty /> : recentPromotions.slice(0, 5).map(({ profile, result, previousSeniority, nextSeniority }) => <ProfileRow key={result.id} item={profile} onOpen={onOpen}
-        detail={`${result.competencia ? formatarCompetencia(result.competencia) : "Sem competência"} · ${previousSeniority} → ${nextSeniority}`} badge={formatarSquadAtual(profile.perfil.squad_atual)} />)}
+      {recentPromotions.length === 0 ? <Empty /> : recentPromotions.slice(0, 5).map((promotion) => {
+        const { profile, result, previousSeniority, nextSeniority } = promotion;
+        const isRoleTransition = promotion.promotionType === "role_transition";
+        const detail = isRoleTransition
+          ? `${result.competencia ? formatarCompetencia(result.competencia) : "Sem competência"} · ${promotion.fromPosition ?? "SDR"} → ${promotion.toPosition ?? "Closer"}`
+          : `${result.competencia ? formatarCompetencia(result.competencia) : "Sem competência"} · ${previousSeniority} → ${nextSeniority}`;
+
+        return <ProfileRow
+          key={`${promotion.promotionType}-${result.id}`}
+          item={profile}
+          onOpen={onOpen}
+          detail={detail}
+          badge={isRoleTransition ? "Promoção de função" : "Promoção de senioridade"}
+        />;
+      })}
     </ListCard>
   </div>;
 }
