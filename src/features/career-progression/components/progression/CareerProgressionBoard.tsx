@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { derivarOpcoesDeFiltro, formatarSquadAtual } from "../../domain";
 import {
-  buildCareerPromotions, buildCycleColumns, countUniqueCareerPromoted, filterProfiles,
-  listCompetences, type AnalyticsFilters, type PromotionView,
+  buildCareerPromotions, buildCycleColumns, countUniqueCareerPromoted,
+  filterProfilesByHistoricalSquad, listCompetences, listSquadsByCompetence,
+  squadForCompetence, type AnalyticsFilters, type PromotionView,
 } from "../../domain/analytics";
 import type { ColaboradorPerfil, ColaboradorResultado, PerfilComHistorico } from "../../types";
-import { formatarCompetencia, formatarEtapaProgresso } from "@/lib/progression";
+import { formatarCompetencia, formatarComposicaoCiclo, formatarEtapaProgresso } from "@/lib/progression";
 import { CareerFiltersBar } from "../shared/CareerFiltersBar";
 import { ProfileHistoryDialog } from "../shared/ProfileHistoryDialog";
 
@@ -29,8 +30,33 @@ export function CareerProgressionBoard({ perfis, resultados, perfisComHistorico,
     boardRef.current.querySelector<HTMLElement>(`[data-column="${focus}"]`)?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   }, [focus]);
 
-  const options = useMemo(() => derivarOpcoesDeFiltro(perfis), [perfis]);
-  const filtered = useMemo(() => filterProfiles(perfisComHistorico, filters), [perfisComHistorico, filters]);
+  const currentOptions = useMemo(
+    () => derivarOpcoesDeFiltro(perfis),
+    [perfis],
+  );
+
+  const options = useMemo(
+    () => ({
+      ...currentOptions,
+      squads: listSquadsByCompetence(
+        perfisComHistorico,
+        filters.competence,
+      ),
+    }),
+    [
+      currentOptions,
+      perfisComHistorico,
+      filters.competence,
+    ],
+  );
+
+  const filtered = useMemo(
+    () => filterProfilesByHistoricalSquad(
+      perfisComHistorico,
+      filters,
+    ),
+    [perfisComHistorico, filters],
+  );
 
   // Promoção na competência selecionada tem prioridade
   // sobre os estágios 0/3, 1/3 e 2/3.
@@ -66,9 +92,9 @@ export function CareerProgressionBoard({ perfis, resultados, perfisComHistorico,
     {filtered.length === 0 ? <div role="status" className="rounded-2xl border border-dashed bg-card p-10 text-center"><p className="font-semibold">Nenhum colaborador corresponde aos filtros.</p>
       <Button variant="outline" className="mt-4" onClick={() => setFilters(defaults(latest))}>Limpar filtros</Button></div> :
       <div ref={boardRef} className="mx-auto w-full pb-3" aria-label="Quadro de progressão"><div data-testid="progression-columns" className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <CycleColumn title="0/3" description="Nenhuma Meta 3 no ciclo atual" items={columns.meta1} progress={0} competence={filters.competence} onOpen={setSelected} />
-        <CycleColumn title="1/3" description="Uma Meta 3 no ciclo atual" items={columns.meta2} progress={1} competence={filters.competence} onOpen={setSelected} />
-        <CycleColumn title="2/3" description="Uma Meta 3 para a promoção" items={columns.meta3} progress={2} competence={filters.competence} onOpen={setSelected} dataColumn="meta3" />
+        <CycleColumn title="0/3" description="Ciclo iniciado em junho/2026" items={columns.meta1} progress={0} competence={filters.competence} onOpen={setSelected} />
+        <CycleColumn title="1/3" description="Um resultado válido no ciclo" items={columns.meta2} progress={1} competence={filters.competence} onOpen={setSelected} />
+        <CycleColumn title="2/3" description="A um resultado válido da promoção" items={columns.meta3} progress={2} competence={filters.competence} onOpen={setSelected} dataColumn="meta3" />
         <PromotionColumn items={promotions} onOpen={setSelected} />
       </div></div>}
     <ProfileHistoryDialog item={selected} onClose={() => setSelected(null)} />
@@ -95,9 +121,12 @@ function CycleColumn({ title, description, items, progress, competence, onOpen, 
   return <ColumnShell title={title} description={description} count={items.length} tone={tones[progress]} dataColumn={dataColumn}>{items.map((item) => {
     const result = item.resultados.find((row) => row.competencia === competence);
     return <PersonCard key={item.perfil.id} item={item} onOpen={onOpen}><div className="flex flex-wrap gap-1.5"><Badge variant={item.perfil.ativo ? "secondary" : "outline"}>{item.perfil.ativo ? "Ativo" : "Inativo"}</Badge>
-      {progress === 2 && <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Próximo da promoção</Badge>}</div>
-      <p className="text-xs text-muted-foreground">{formatarSquadAtual(item.perfil.squad_atual)} · {item.perfil.posicao_atual ?? "Posição não informada"}</p>
+      {progress === 2 && <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Próximo da promoção</Badge>}
+      {item.perfil.posicao_atual?.trim().toLocaleLowerCase("pt-BR") === "sdr" && (item.perfil.bonificacao_sdr === 30 || item.perfil.bonificacao_sdr === 40) &&
+        <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Bonificação: {item.perfil.bonificacao_sdr}%</Badge>}</div>
+      <p className="text-xs text-muted-foreground">{squadForCompetence(item, competence) ? formatarSquadAtual(squadForCompetence(item, competence)!) : "Squad não informado"} · {item.perfil.posicao_atual ?? "Posição não informada"}</p>
       <p className="text-xs text-muted-foreground">{item.perfil.senioridade_atual ?? "Senioridade não informada"} · {formatarEtapaProgresso(progress)}</p>
+      <p className="text-xs text-muted-foreground">{formatarComposicaoCiclo(item.perfil.progresso_meta3, item.perfil.progresso_meta2 ?? 0)}</p>
       <p className="text-xs"><span className="text-muted-foreground">{competence ? formatarCompetencia(competence) : "Competência"}:</span> {result?.meta_alcancada ?? "Sem resultado"}</p></PersonCard>;
   })}</ColumnShell>;
 }
@@ -136,7 +165,9 @@ function PromotionColumn({ items, onOpen }: { items: PromotionView[]; onOpen: (i
         accent="green"
       >
         <p className="text-xs text-muted-foreground">
-          {formatarSquadAtual(profile.perfil.squad_atual)}
+          {result.squad
+            ? formatarSquadAtual(result.squad)
+            : "Squad não informado"}
           {" · "}
           {profile.perfil.posicao_atual ?? "Posição não informada"}
         </p>

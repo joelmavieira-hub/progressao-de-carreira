@@ -4,6 +4,7 @@ import type {
   CareerProgressionFilterOptions,
   CareerProgressionFilters,
   CareerProgressionSummary,
+  CareerProgressionEvent,
   ColaboradorPerfil,
   ColaboradorResultado,
   PerfilComHistorico,
@@ -34,7 +35,7 @@ function compareResults(a: ColaboradorResultado, b: ColaboradorResultado): numbe
 }
 
 export function relacionarPerfisEResultados(
-  perfis: readonly ColaboradorPerfil[], resultados: readonly ColaboradorResultado[],
+  perfis: readonly ColaboradorPerfil[], resultados: readonly ColaboradorResultado[], eventos: readonly CareerProgressionEvent[] = [],
 ): PerfilComHistorico[] {
   const issues: CareerIntegrityIssue[] = [];
   const profilesById = new Map<string, ColaboradorPerfil>();
@@ -79,6 +80,8 @@ export function relacionarPerfisEResultados(
         totalMeta3: history.filter((item) => item.meta_alcancada === "Meta 3").length,
         totalPromocoes: history.filter((item) => item.recebeu_promocao).length,
         ultimaCompetencia: history.at(-1)?.competencia ?? null,
+        eventos: eventos.filter((evento) => evento.colaborador_id === perfil.id)
+          .sort((a, b) => a.competencia.localeCompare(b.competencia) || a.event_type.localeCompare(b.event_type)),
       };
     });
 }
@@ -93,9 +96,9 @@ export function calcularResumo(
     ativos: perfis.filter((perfil) => perfil.ativo).length,
     inativos: perfis.filter((perfil) => !perfil.ativo).length,
     totalResultados: resultados.length,
-    progresso0: perfis.filter((perfil) => perfil.progresso_meta3 === 0).length,
-    progresso1: perfis.filter((perfil) => perfil.progresso_meta3 === 1).length,
-    progresso2: perfis.filter((perfil) => perfil.progresso_meta3 === 2).length,
+    progresso0: perfis.filter((perfil) => (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 0).length,
+    progresso1: perfis.filter((perfil) => (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 1).length,
+    progresso2: perfis.filter((perfil) => (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 2).length,
     promocoesRegistradas: resultados.filter((resultado) => resultado.recebeu_promocao).length,
     pessoasPromovidas: new Set(resultados.filter((resultado) => resultado.recebeu_promocao)
       .map((resultado) => resultado.colaborador_id)).size,
@@ -105,17 +108,17 @@ export function calcularResumo(
 }
 
 export function montarDadosDeProgressao(
-  perfis: ColaboradorPerfil[], resultados: ColaboradorResultado[],
+  perfis: ColaboradorPerfil[], resultados: ColaboradorResultado[], eventos: CareerProgressionEvent[] = [],
 ): CareerProgressionData {
   const perfisOperacionais = perfis.filter(isOperationalProfile);
   const idsOperacionais = new Set(perfisOperacionais.map((perfil) => perfil.id));
   const resultadosOperacionais = resultados.filter((resultado) => resultado.colaborador_id !== null && idsOperacionais.has(resultado.colaborador_id));
   return {
-    perfis, resultados,
-    perfisComHistorico: relacionarPerfisEResultados(perfis, resultados),
+    perfis, resultados, eventos,
+    perfisComHistorico: relacionarPerfisEResultados(perfis, resultados, eventos),
     resumo: calcularResumo(perfis, resultados),
     perfisOperacionais, resultadosOperacionais,
-    perfisOperacionaisComHistorico: relacionarPerfisEResultados(perfisOperacionais, resultadosOperacionais),
+    perfisOperacionaisComHistorico: relacionarPerfisEResultados(perfisOperacionais, resultadosOperacionais, eventos),
     resumoOperacional: calcularResumo(perfisOperacionais, resultadosOperacionais),
   };
 }
@@ -138,7 +141,7 @@ export function filtrarPerfis(
     if (filtros.squad !== "todos" && perfil.squad_atual !== filtros.squad) return false;
     if (filtros.posicao !== "todos" && perfil.posicao_atual !== filtros.posicao) return false;
     if (filtros.senioridade !== "todos" && perfil.senioridade_atual !== filtros.senioridade) return false;
-    if (filtros.progresso !== "todos" && perfil.progresso_meta3 !== Number(filtros.progresso)) return false;
+    if (filtros.progresso !== "todos" && (perfil.progresso_ciclo ?? perfil.progresso_meta3) !== Number(filtros.progresso)) return false;
     return true;
   });
 }
@@ -173,7 +176,7 @@ export function adaptarPerfisParaSdr(perfis: readonly PerfilComHistorico[]): SDR
     level: normalizeSeniority(perfil.senioridade_atual) ?? "Júnior 1",
     squad: perfil.squad_atual ?? "Sem squad",
     position: perfil.posicao_atual,
-    currentProgress: perfil.progresso_meta3,
+    currentProgress: perfil.progresso_ciclo ?? perfil.progresso_meta3,
     active: perfil.ativo,
     history: resultados.map((resultado) => ({
       id: resultado.id,

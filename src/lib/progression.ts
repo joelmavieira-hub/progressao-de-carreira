@@ -37,6 +37,10 @@ export interface SDR {
 
 export interface ProgressionState {
   meta3Streak: number;
+  meta2Count: 0 | 1;
+  cycleProgress: number;
+  sdrBonus: 0 | 30 | 40;
+  sdrBonusStreak: number;
   tier: 1 | 2;
   wasReset: boolean;
   readyForLevelUp: boolean;
@@ -55,6 +59,14 @@ export interface MonthlyProgressionResult {
   progress: number;
   receivedPromotion: boolean;
   cycleCompleted: boolean;
+}
+
+export interface CareerRuleState {
+  seniority: Seniority;
+  meta3: number;
+  meta2: 0 | 1;
+  bonus: 0 | 30 | 40;
+  bonusStreak: number;
 }
 
 export interface PromotionClassification {
@@ -135,6 +147,28 @@ export function processMonthlyGoal(currentSeniority: string, currentProgress: nu
   return { seniority, progress, receivedPromotion: false, cycleCompleted: false };
 }
 
+export function processCareerGoal(state: CareerRuleState, goal: GoalLevel, isSdr: boolean): CareerRuleState & { receivedPromotion: boolean; cycleCompleted: boolean } {
+  let { seniority, meta3, meta2, bonus, bonusStreak } = state;
+  let receivedPromotion = false;
+  let cycleCompleted = false;
+  if (goal === "meta1") { meta3 = 0; meta2 = 0; }
+  if (goal === "meta2") { if (meta2 === 1) meta3 = 0; meta2 = 1; }
+  if (goal === "meta3") meta3 += 1;
+  if (meta3 >= 3 || (meta3 >= 2 && meta2 === 1)) {
+    const next = getNextSeniority(seniority);
+    meta3 = 0; meta2 = 0; cycleCompleted = true;
+    if (next) { seniority = next; receivedPromotion = true; }
+  }
+  if (!isSdr) { bonus = 0; bonusStreak = 0; }
+  else if (goal === "meta1") { bonus = 0; bonusStreak = 0; }
+  else if (goal === "meta2") { bonusStreak = 0; if (bonus === 40) bonus = 30; }
+  else if (goal === "meta3") {
+    if (bonus === 30) { bonus = 40; bonusStreak = 0; }
+    else if (bonus === 0) { bonusStreak += 1; if (bonusStreak >= 3) { bonus = 40; bonusStreak = 0; } }
+  }
+  return { seniority, meta3, meta2, bonus, bonusStreak, receivedPromotion, cycleCompleted };
+}
+
 export function compareCompetence(a: MonthRecord, b: MonthRecord): number {
   const byDate = (a.competence ?? "9999-12-31").localeCompare(b.competence ?? "9999-12-31");
   return byDate || (a.id ?? "").localeCompare(b.id ?? "");
@@ -179,65 +213,69 @@ export function parseLegacyCompetence(value: string | null | undefined, baseYear
   return month ? `${baseYear}-${String(month).padStart(2, "0")}-01` : null;
 }
 
-/** Pure chronological reconstruction using the competence-level seniority priority. */
+/** Deterministic mirror used by tests/simulation. Supabase remains the source of truth. */
 export function computeProgression(history: readonly MonthRecord[], currentSeniority?: string | null, throughCompetence?: string | null): ProgressionState {
   const ordered = uniqueRecordsByCompetence(history, throughCompetence);
-  let seniority: Seniority | null = ordered
-    .map((record) => normalizeSeniority(record.informedSeniority))
-    .find((value): value is Seniority => value !== null)
-    ?? ordered.map((record) => normalizeSeniority(record.seniority))
-      .find((value): value is Seniority => value !== null)
+  const epoch = "2026-06-01";
+  const beforeEpoch = ordered.filter((record) => (record.competence as string) < epoch);
+  const eligible = ordered.filter((record) => (record.competence as string) >= epoch);
+  const baseline = beforeEpoch.at(-1);
+  let seniority: Seniority | null = normalizeSeniority(baseline?.informedSeniority)
+    ?? normalizeSeniority(baseline?.seniority)
+    ?? eligible.map((record) => normalizeSeniority(record.informedSeniority)).find((value): value is Seniority => value !== null)
+    ?? eligible.map((record) => normalizeSeniority(record.seniority)).find((value): value is Seniority => value !== null)
     ?? normalizeSeniority(currentSeniority);
-  let progress = 0;
+  if (baseline?.receivedPromotion && seniority) seniority = getNextSeniority(seniority) ?? seniority;
+  let meta3 = 0;
+  let meta2: 0 | 1 = 0;
+  let bonus: 0 | 30 | 40 = 0;
+  let bonusStreak = 0;
   let wasReset = false;
   let resetCompetence: string | null = null;
   let lastGoal: GoalLevel | null = null;
-  let previousPosition: string | null = null;
+  let previousPosition: string | null = baseline ? normalizedPosition(baseline.position) : null;
   const cycleCompletionCompetences: string[] = [];
   let currentCycleMeta3Competences: string[] = [];
   const promotionCompetences: string[] = [];
   const sdrToCloserCompetences: string[] = [];
-  for (const record of ordered) {
+  for (const record of eligible) {
     const historicalPosition = normalizedPosition(record.position);
     const informedSeniority = normalizeSeniority(record.informedSeniority);
     if (previousPosition === "SDR" && historicalPosition === "CLOSER") {
-      progress = 0;
+      meta3 = 0; meta2 = 0; bonus = 0; bonusStreak = 0;
       seniority = informedSeniority ?? seniority;
       currentCycleMeta3Competences = [];
-      wasReset = true;
-      resetCompetence = record.competence ?? null;
+      wasReset = true; resetCompetence = record.competence ?? null; lastGoal = record.goal;
       if (record.competence) sdrToCloserCompetences.push(record.competence);
+      previousPosition = historicalPosition;
+      continue;
     }
     if (historicalPosition) previousPosition = historicalPosition;
-
-    // The sheet's competence-level seniority is authoritative. A level change
-    // starts a new level cycle before evaluating that competence, just like an
-    // explicit role transition starts the new Closer cycle at zero.
     if (informedSeniority && informedSeniority !== seniority) {
-      seniority = informedSeniority;
-      progress = 0;
-      currentCycleMeta3Competences = [];
-      wasReset = true;
-      resetCompetence = record.competence ?? null;
+      seniority = informedSeniority; meta3 = 0; meta2 = 0; currentCycleMeta3Competences = [];
+      wasReset = true; resetCompetence = record.competence ?? null;
     }
-
     if (!seniority) continue;
     lastGoal = record.goal;
-    const result = processMonthlyGoal(seniority, progress, record.goal);
+    const previousMeta2 = meta2;
+    const result = processCareerGoal({ seniority, meta3, meta2, bonus, bonusStreak }, record.goal, historicalPosition === "SDR");
     if (result.cycleCompleted) {
-      wasReset = true;
-      resetCompetence = record.competence ?? null;
+      wasReset = true; resetCompetence = record.competence ?? null;
       if (record.competence) cycleCompletionCompetences.push(record.competence);
       currentCycleMeta3Competences = [];
-    } else if (record.goal === "meta3" && record.competence) {
-      currentCycleMeta3Competences.push(record.competence);
-    }
+    } else if (record.goal === "meta1" || (record.goal === "meta2" && previousMeta2 === 1)) {
+      currentCycleMeta3Competences = [];
+    } else if (record.goal === "meta3" && record.competence) currentCycleMeta3Competences.push(record.competence);
     if (result.receivedPromotion && record.competence) promotionCompetences.push(record.competence);
-    seniority = result.seniority;
-    progress = result.progress;
+    seniority = result.seniority; meta3 = result.meta3; meta2 = result.meta2;
+    bonus = result.bonus; bonusStreak = result.bonusStreak;
   }
   const isCareerTop = seniority === "Sênior 3";
-  return { meta3Streak: progress, tier: progress >= 2 ? 2 : 1, wasReset, readyForLevelUp: progress === 2 && !isCareerTop, isCareerTop, lastGoal, seniorityAtPeriod: seniority, resetCompetence, cycleCompletionCompetences, currentCycleMeta3Competences, promotionCompetences, sdrToCloserCompetences };
+  const cycleProgress = meta3 + meta2;
+  return { meta3Streak: meta3, meta2Count: meta2, cycleProgress, sdrBonus: bonus, sdrBonusStreak: bonusStreak,
+    tier: cycleProgress >= 2 ? 2 : 1, wasReset, readyForLevelUp: cycleProgress === 2 && !isCareerTop,
+    isCareerTop, lastGoal, seniorityAtPeriod: seniority, resetCompetence, cycleCompletionCompetences,
+    currentCycleMeta3Competences, promotionCompetences, sdrToCloserCompetences };
 }
 
 export function getPromotionBand(seniority: string, progress: number, promotedInPeriod = false): PromotionBand {
@@ -258,7 +296,7 @@ export function classifyPromotionBands(sdrs: readonly SDR[], period?: string | n
       const state = computeProgression(through, sdr.level, period);
       const seniorityAtPeriod = state.seniorityAtPeriod ?? sdr.level;
       const historicalSquad = getCurrentSquad(through, period);
-      return { sdr: historicalSquad ? { ...sdr, squad: historicalSquad } : sdr, progress: state.meta3Streak, promotedInPeriod, seniorityAtPeriod, band: getPromotionBand(seniorityAtPeriod, state.meta3Streak, promotedInPeriod) };
+      return { sdr: historicalSquad ? { ...sdr, squad: historicalSquad } : sdr, progress: state.cycleProgress, promotedInPeriod, seniorityAtPeriod, band: getPromotionBand(seniorityAtPeriod, state.cycleProgress, promotedInPeriod) };
     })
     .sort((a, b) => a.sdr.name.localeCompare(b.sdr.name, "pt-BR", { sensitivity: "base" }));
 }
@@ -281,6 +319,11 @@ export function formatarEtapaProgresso(progresso: number): string {
   if (progresso === 1) return "1/3";
   if (progresso === 2) return "2/3";
   return "Etapa não informada";
+}
+
+export function formatarComposicaoCiclo(meta3: number, meta2: number): string {
+  const parts = [meta3 ? `${meta3} Meta 3` : null, meta2 ? `${meta2} Meta 2` : null].filter(Boolean);
+  return parts.length ? parts.join(" + ") : "Ciclo sem metas válidas";
 }
 
 export function goalTone(goal: GoalLevel): "success" | "warning" | "danger" | "muted" {

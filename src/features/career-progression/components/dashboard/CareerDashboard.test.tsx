@@ -119,4 +119,49 @@ describe("CareerDashboard", () => {
       "Promoções de senioridade e mudanças de SDR para Closer por competência",
     );
   });
+  it("exibe o squad da competência em Próximos da promoção", () => {
+    const ana = {
+      ...profile(
+        "ana-squad",
+        "Ana Squad",
+        true,
+      ),
+      squad_atual: "Gorila",
+    };
+
+    const agosto = {
+      ...result(
+        "ana-squad-ago",
+        "ana-squad",
+        "Meta 2",
+      ),
+      squad: "Urso",
+    };
+
+    render(
+      <TooltipProvider>
+        <CareerDashboard
+          perfis={[ana]}
+          resultados={[agosto]}
+          perfisComHistorico={relacionarPerfisEResultados(
+            [ana],
+            [agosto],
+          )}
+          isFetching={false}
+          lastUpdatedAt={null}
+          onRefresh={vi.fn()}
+          onNavigate={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    const near =
+      screen.getByTestId("near-promotion-list");
+
+    expect(near)
+      .toHaveTextContent("Urso");
+
+    expect(near)
+      .not.toHaveTextContent("Gorila");
+  });
 });

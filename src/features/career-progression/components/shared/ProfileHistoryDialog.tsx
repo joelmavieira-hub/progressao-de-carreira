@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatarCompetencia, formatarEtapaProgresso } from "@/lib/progression";
+import { formatarCompetencia, formatarComposicaoCiclo, formatarEtapaProgresso } from "@/lib/progression";
 import { formatarSquadAtual } from "../../domain";
 import type { PerfilComHistorico } from "../../types";
 
@@ -10,7 +10,12 @@ export function ProfileHistoryDialog({ item, onClose }: { item: PerfilComHistori
     {item && <><DialogHeader><DialogTitle>{item.perfil.nome_colaborador}</DialogTitle>
       <DialogDescription>{item.perfil.ativo ? "Ativo" : "Inativo"} · {item.perfil.posicao_atual ?? "Posição não informada"} · {formatarSquadAtual(item.perfil.squad_atual)}</DialogDescription></DialogHeader>
       <div className="flex flex-wrap gap-2"><Badge variant="secondary">{item.perfil.senioridade_atual ?? "Senioridade não informada"}</Badge>
-        <Badge variant="outline">{formatarEtapaProgresso(item.perfil.progresso_meta3)}</Badge></div>
+        <Badge variant="outline">{formatarEtapaProgresso(item.perfil.progresso_ciclo ?? item.perfil.progresso_meta3)}</Badge>
+        <Badge variant="outline">{formatarComposicaoCiclo(item.perfil.progresso_meta3, item.perfil.progresso_meta2 ?? 0)}</Badge>
+        {item.perfil.posicao_atual?.trim().toLocaleLowerCase("pt-BR") === "sdr" && (item.perfil.bonificacao_sdr === 30 || item.perfil.bonificacao_sdr === 40) &&
+          <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Bonificação: {item.perfil.bonificacao_sdr}%</Badge>}</div>
+      {item.eventos.length > 0 && <section aria-label="Eventos de carreira" className="space-y-2"><h3 className="text-sm font-semibold">Eventos de carreira</h3>
+        <div className="flex flex-wrap gap-2">{item.eventos.map((evento) => <Badge key={evento.id} variant="secondary">{formatarCompetencia(evento.competencia)} · {eventLabel(evento.event_type)}</Badge>)}</div></section>}
       <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Competência</TableHead><TableHead>Meta</TableHead><TableHead>Senioridade histórica</TableHead><TableHead>Senioridade informada</TableHead><TableHead>Squad histórico</TableHead><TableHead>Posição histórica</TableHead><TableHead>Promoção</TableHead></TableRow></TableHeader>
         <TableBody>{item.resultados.map((row) => <TableRow key={row.id}><TableCell>{row.competencia ? formatarCompetencia(row.competencia) : "Não informada"}</TableCell>
           <TableCell>{row.meta_alcancada ?? "Não informada"}</TableCell><TableCell>{row.senioridade ?? "Não informada"}</TableCell>
@@ -18,4 +23,16 @@ export function ProfileHistoryDialog({ item, onClose }: { item: PerfilComHistori
           <TableCell>{row.posicao ?? "Não informada"}</TableCell><TableCell>{row.recebeu_promocao ? "Sim" : "Não"}</TableCell></TableRow>)}</TableBody>
       </Table></div></>}
   </DialogContent></Dialog>;
+}
+
+function eventLabel(type: string): string {
+  return ({
+    career_cycle_completed: "Ciclo concluído no topo",
+    seniority_promotion: "Promoção de senioridade",
+    role_promotion: "Promoção de função",
+    sdr_bonus_unlocked_40: "Bonificação liberada 40%",
+    sdr_bonus_reduced_30: "Bonificação reduzida 30%",
+    sdr_bonus_recovered_40: "Bonificação recuperada 40%",
+    sdr_bonus_lost: "Bonificação perdida",
+  } as Record<string, string>)[type] ?? type;
 }

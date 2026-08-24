@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { derivarOpcoesDeFiltro } from "../../domain";
 import {
   buildCareerPromotions, calculateCoverage, countUniqueCareerPromoted, distributeCycle, distributeSeniority,
-  filterCareerPromotions, filterHistoricalResults, filterProfiles, findNearPromotion, groupCareerPromotionsByCompetence,
+  filterCareerPromotions, filterHistoricalResults, filterProfiles, filterProfilesByHistoricalSquad, listSquadsByCompetence, findNearPromotion, groupCareerPromotionsByCompetence,
   groupGoalsByCompetence, groupProgressBySquad, latestDatabaseUpdate, listCompetences, type AnalyticsFilters,
 } from "../../domain/analytics";
 import type { ColaboradorPerfil, ColaboradorResultado, PerfilComHistorico } from "../../types";
@@ -28,9 +28,44 @@ export function CareerDashboard({ perfis, resultados, perfisComHistorico, histor
   const [selected, setSelected] = useState<PerfilComHistorico | null>(null);
   useEffect(() => { if (!filters.competence && latest) setFilters((current) => ({ ...current, competence: latest })); }, [filters.competence, latest]);
 
-  const options = useMemo(() => derivarOpcoesDeFiltro(perfis), [perfis]);
-  const filtered = useMemo(() => filterProfiles(perfisComHistorico, filters), [perfisComHistorico, filters]);
-  const withoutStatus = useMemo(() => filterProfiles(perfisComHistorico, { ...filters, status: "todos" }), [perfisComHistorico, filters]);
+  const currentOptions = useMemo(
+    () => derivarOpcoesDeFiltro(perfis),
+    [perfis],
+  );
+
+  const options = useMemo(
+    () => ({
+      ...currentOptions,
+      squads: listSquadsByCompetence(
+        perfisComHistorico,
+        filters.competence,
+      ),
+    }),
+    [
+      currentOptions,
+      perfisComHistorico,
+      filters.competence,
+    ],
+  );
+
+  const filtered = useMemo(
+    () => filterProfilesByHistoricalSquad(
+      perfisComHistorico,
+      filters,
+    ),
+    [perfisComHistorico, filters],
+  );
+
+  const withoutStatus = useMemo(
+    () => filterProfilesByHistoricalSquad(
+      perfisComHistorico,
+      {
+        ...filters,
+        status: "todos",
+      },
+    ),
+    [perfisComHistorico, filters],
+  );
   const historicalProfileScope = useMemo(() => filterProfiles(perfisComHistorico, {
     ...filters, squad: "todos", position: "todos", seniority: "todos",
   }), [perfisComHistorico, filters]);
@@ -73,8 +108,8 @@ export function CareerDashboard({ perfis, resultados, perfisComHistorico, histor
           operationalProfiles={perfis.length} competenceRecords={competenceRecords} competence={filters.competence}
           updatedAt={databaseDate} isFetching={isFetching} onRefresh={onRefresh} /></div>
       <DashboardCharts cycle={distributeCycle(filtered)} seniority={distributeSeniority(filtered)} monthlyGoals={groupGoalsByCompetence(historicalFilteredResults)}
-        promotions={groupCareerPromotionsByCompetence(historicalFilteredResults, filteredPromotions)} squads={groupProgressBySquad(filtered)} />
-      <DashboardLists nearPromotion={findNearPromotion(filtered)} recentPromotions={filteredPromotions}
+        promotions={groupCareerPromotionsByCompetence(historicalFilteredResults, filteredPromotions)} squads={groupProgressBySquad(filtered, filters.competence)} />
+      <DashboardLists nearPromotion={findNearPromotion(filtered)} recentPromotions={filteredPromotions} competence={filters.competence}
         onOpen={setSelected} onNavigate={onNavigate} />
     </>}
     <ProfileHistoryDialog item={selected} onClose={() => setSelected(null)} />

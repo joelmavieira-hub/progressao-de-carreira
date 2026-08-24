@@ -1,8 +1,17 @@
 import type { Tables } from "@/integrations/supabase/types";
 
 type GeneratedColaboradorPerfil = Tables<"colaboradores_perfis">;
-export type ColaboradorPerfil = Omit<GeneratedColaboradorPerfil, "jornada_atual"> & { jornada_atual?: string | null };
+export type ColaboradorPerfil = Omit<GeneratedColaboradorPerfil,
+  "jornada_atual" | "progresso_meta2" | "progresso_ciclo" | "bonificacao_sdr" | "streak_meta3_bonificacao"
+> & {
+  jornada_atual?: string | null;
+  progresso_meta2?: number;
+  progresso_ciclo?: number;
+  bonificacao_sdr?: number;
+  streak_meta3_bonificacao?: number;
+};
 export type ColaboradorResultado = Tables<"colaboradores">;
+export type CareerProgressionEvent = Tables<"career_progression_events">;
 
 export interface PerfilComHistorico {
   perfil: ColaboradorPerfil;
@@ -10,6 +19,7 @@ export interface PerfilComHistorico {
   totalMeta3: number;
   totalPromocoes: number;
   ultimaCompetencia: string | null;
+  eventos: CareerProgressionEvent[];
 }
 
 export interface CareerProgressionSummary {
@@ -29,6 +39,7 @@ export interface CareerProgressionSummary {
 export interface CareerProgressionData {
   perfis: ColaboradorPerfil[];
   resultados: ColaboradorResultado[];
+  eventos: CareerProgressionEvent[];
   perfisComHistorico: PerfilComHistorico[];
   resumo: CareerProgressionSummary;
   perfisOperacionais: ColaboradorPerfil[];

@@ -2,11 +2,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseClient } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { montarDadosDeProgressao } from "../domain";
-import type { CareerProgressionData, ColaboradorPerfil, ColaboradorResultado } from "../types";
+import type { CareerProgressionData, CareerProgressionEvent, ColaboradorPerfil, ColaboradorResultado } from "../types";
 
 export const RESULTS_PAGE_SIZE = 500;
 const MAX_RESULT_PAGES = 10_000;
-const PROFILE_COLUMNS = "id,nome_colaborador,nome_normalizado,posicao_atual,squad_atual,jornada_atual,senioridade_atual,progresso_meta3,ativo,created_at,updated_at";
+const PROFILE_COLUMNS = "id,nome_colaborador,nome_normalizado,posicao_atual,squad_atual,jornada_atual,senioridade_atual,progresso_meta3,progresso_meta2,progresso_ciclo,bonificacao_sdr,streak_meta3_bonificacao,ativo,created_at,updated_at";
 const RESULT_COLUMNS = "id,colaborador_id,nome_colaborador,posicao,squad,competencia,meta_alcancada,senioridade,senioridade_informada,recebeu_promocao,origem,mes_referencia,created_at,updated_at";
 type ReadClient = SupabaseClient<Database>;
 
@@ -41,8 +41,12 @@ export async function buscarTodosOsResultados(
 }
 
 export async function buscarDadosDeProgressao(signal?: AbortSignal): Promise<CareerProgressionData> {
-  const [perfis, resultados] = await Promise.all([buscarTodosOsPerfis(signal), buscarTodosOsResultados(signal)]);
-  return montarDadosDeProgressao(perfis, resultados);
+  let eventQuery = getSupabaseClient().from("career_progression_events").select("id,colaborador_id,competencia,event_type,senioridade,recebeu_promocao,created_at")
+    .order("competencia", { ascending: true }).order("event_type", { ascending: true });
+  if (signal) eventQuery = eventQuery.abortSignal(signal);
+  const [perfis, resultados, eventResponse] = await Promise.all([buscarTodosOsPerfis(signal), buscarTodosOsResultados(signal), eventQuery]);
+  if (eventResponse.error) throw new Error("Não foi possível carregar os eventos de carreira.");
+  return montarDadosDeProgressao(perfis, resultados, (eventResponse.data ?? []) as CareerProgressionEvent[]);
 }
 
 async function contarTabela(table: "colaboradores_perfis" | "colaboradores"): Promise<number> {

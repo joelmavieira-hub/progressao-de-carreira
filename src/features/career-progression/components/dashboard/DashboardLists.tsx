@@ -4,19 +4,32 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatarCompetencia, formatarEtapaProgresso } from "@/lib/progression";
 import { formatarSquadAtual } from "../../domain";
-import type { PromotionView } from "../../domain/analytics";
+import { squadForCompetence, type PromotionView } from "../../domain/analytics";
 import type { PerfilComHistorico } from "../../types";
 
-export function DashboardLists({ nearPromotion, recentPromotions, onOpen, onNavigate }: {
+export function DashboardLists({ nearPromotion, recentPromotions, competence, onOpen, onNavigate }: {
   nearPromotion: PerfilComHistorico[];
   recentPromotions: PromotionView[];
+  competence: string;
   onOpen: (item: PerfilComHistorico) => void;
   onNavigate: (focus: "meta3" | "promoted") => void;
 }) {
   return <div role="region" aria-label="Painéis de acompanhamento" className="mx-auto grid w-full items-stretch grid-cols-1 gap-4 md:grid-cols-2 lg:gap-5">
     <ListCard title="Próximos da promoção" icon={Rocket} action={() => onNavigate("meta3")} testId="near-promotion-list">
-      {nearPromotion.length === 0 ? <Empty /> : nearPromotion.slice(0, 5).map((item) => <ProfileRow key={item.perfil.id} item={item} onOpen={onOpen}
-        detail={`${formatarSquadAtual(item.perfil.squad_atual)} · ${item.perfil.senioridade_atual ?? "Não informada"}`} badge={formatarEtapaProgresso(2)} />)}
+      {nearPromotion.length === 0 ? <Empty /> : nearPromotion.slice(0, 5).map((item) => {
+        const squad = squadForCompetence(
+          item,
+          competence,
+        );
+
+        return <ProfileRow
+          key={item.perfil.id}
+          item={item}
+          onOpen={onOpen}
+          detail={`${squad ? formatarSquadAtual(squad) : "Squad não informado"} · ${item.perfil.senioridade_atual ?? "Não informada"}`}
+          badge={formatarEtapaProgresso(2)}
+        />;
+      })}
     </ListCard>
     <ListCard title="Promovidos recentemente" icon={Award} action={() => onNavigate("promoted")} testId="recent-promotions-list">
       {recentPromotions.length === 0 ? <Empty /> : recentPromotions.slice(0, 5).map((promotion) => {
@@ -44,8 +57,10 @@ function ListCard({ title, icon: Icon, action, testId, children }: { title: stri
 }
 
 function ProfileRow({ item, detail, badge, onOpen }: { item: PerfilComHistorico; detail: string; badge: string; onOpen: (item: PerfilComHistorico) => void }) {
+  const bonus = item.perfil.posicao_atual?.trim().toLocaleLowerCase("pt-BR") === "sdr" ? item.perfil.bonificacao_sdr : 0;
   return <div className="flex items-start justify-between gap-3 p-4"><div className="min-w-0"><p className="truncate text-sm font-semibold">{item.perfil.nome_colaborador}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p>
-    <Button variant="link" className="h-auto p-0 pt-2 text-xs" onClick={() => onOpen(item)}>Ver histórico</Button></div><Badge variant="secondary" className="max-w-32 whitespace-normal text-center">{badge}</Badge></div>;
+    <Button variant="link" className="h-auto p-0 pt-2 text-xs" onClick={() => onOpen(item)}>Ver histórico</Button></div><div className="flex max-w-36 flex-wrap justify-end gap-1.5"><Badge variant="secondary" className="whitespace-normal text-center">{badge}</Badge>
+      {(bonus === 30 || bonus === 40) && <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Bonificação: {bonus}%</Badge>}</div></div>;
 }
 
 function Empty() { return <div role="status" className="p-6 text-center text-sm text-muted-foreground">Nenhum registro para os filtros selecionados.</div>; }

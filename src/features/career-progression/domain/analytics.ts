@@ -87,6 +87,79 @@ export function filterResultsByProfiles(results: readonly ColaboradorResultado[]
  * Status and search remain profile-level filters; position, squad and seniority
  * are evaluated from the historical result instead of the current profile.
  */
+/**
+ * Retorna o squad registrado para o colaborador na competência.
+ *
+ * Não usa squad_atual como fallback para impedir que uma alteração
+ * presente reescreva visualmente competências passadas.
+ */
+export function squadForCompetence(
+  profile: PerfilComHistorico,
+  competence: string,
+): string | null {
+  return profile.resultados.find(
+    (row) => row.competencia === competence,
+  )?.squad ?? null;
+}
+
+/**
+ * Aplica o filtro de Squad usando o registro da competência
+ * selecionada. Os demais filtros mantêm o comportamento existente.
+ */
+export function filterProfilesByHistoricalSquad(
+  profiles: readonly PerfilComHistorico[],
+  filters: AnalyticsFilters,
+): PerfilComHistorico[] {
+  const profileScope = filterProfiles(
+    profiles,
+    {
+      ...filters,
+      squad: "todos",
+    },
+  );
+
+  if (filters.squad === "todos") {
+    return profileScope;
+  }
+
+  return profileScope.filter(
+    (profile) =>
+      squadForCompetence(
+        profile,
+        filters.competence,
+      ) === filters.squad,
+  );
+}
+
+/**
+ * Opções de Squad válidas para a competência selecionada.
+ */
+export function listSquadsByCompetence(
+  profiles: readonly PerfilComHistorico[],
+  competence: string,
+): string[] {
+  return [
+    ...new Set(
+      profiles
+        .map((profile) =>
+          squadForCompetence(
+            profile,
+            competence,
+          ),
+        )
+        .filter(
+          (squad): squad is string =>
+            Boolean(squad) &&
+            normalizeSearch(squad) !== "saiu",
+        ),
+    ),
+  ].sort((a, b) =>
+    a.localeCompare(
+      b,
+      "pt-BR",
+    ),
+  );
+}
 export function filterHistoricalResults(
   results: readonly ColaboradorResultado[],
   profileScope: readonly PerfilComHistorico[],
@@ -116,7 +189,7 @@ export function calculateCoverage(profiles: readonly PerfilComHistorico[], compe
 }
 
 export function distributeCycle(profiles: readonly PerfilComHistorico[]) {
-  return [0, 1, 2].map((progress) => ({ progress, total: profiles.filter(({ perfil }) => perfil.progresso_meta3 === progress).length }));
+  return [0, 1, 2].map((progress) => ({ progress, total: profiles.filter(({ perfil }) => (perfil.progresso_ciclo ?? perfil.progresso_meta3) === progress).length }));
 }
 
 export function distributeSeniority(profiles: readonly PerfilComHistorico[]) {
@@ -300,22 +373,63 @@ export function groupCareerPromotionsByCompetence(
   });
 }
 
-export function groupProgressBySquad(profiles: readonly PerfilComHistorico[]) {
-  const squads = [...new Set(profiles.map(({ perfil }) => perfil.squad_atual).filter((squad): squad is string => Boolean(squad) && !isSquadSaiu(squad)))];
+export function groupProgressBySquad(
+  profiles: readonly PerfilComHistorico[],
+  competence?: string,
+) {
+  const squadOf = (
+    profile: PerfilComHistorico,
+  ): string | null =>
+    competence
+      ? squadForCompetence(profile, competence)
+      : profile.perfil.squad_atual;
+
+  const squads = [
+    ...new Set(
+      profiles
+        .map(squadOf)
+        .filter(
+          (squad): squad is string =>
+            Boolean(squad) &&
+            !isSquadSaiu(squad),
+        ),
+    ),
+  ];
+
   return squads.map((squad) => {
-    const people = profiles.filter(({ perfil }) => perfil.squad_atual === squad);
+    const people = profiles.filter(
+      (profile) =>
+        squadOf(profile) === squad,
+    );
+
     return {
       squad,
-      meta1: people.filter(({ perfil }) => perfil.progresso_meta3 === 0).length,
-      meta2: people.filter(({ perfil }) => perfil.progresso_meta3 === 1).length,
-      meta3: people.filter(({ perfil }) => perfil.progresso_meta3 === 2).length,
+      meta1: people.filter(
+        ({ perfil }) =>
+          (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 0,
+      ).length,
+      meta2: people.filter(
+        ({ perfil }) =>
+          (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 1,
+      ).length,
+      meta3: people.filter(
+        ({ perfil }) =>
+          (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 2,
+      ).length,
       total: people.length,
     };
-  }).sort((a, b) => b.total - a.total || a.squad.localeCompare(b.squad, "pt-BR"));
+  }).sort(
+    (a, b) =>
+      b.total - a.total ||
+      a.squad.localeCompare(
+        b.squad,
+        "pt-BR",
+      ),
+  );
 }
 
 export function findNearPromotion(profiles: readonly PerfilComHistorico[]): PerfilComHistorico[] {
-  return profiles.filter(({ perfil }) => perfil.progresso_meta3 === 2);
+  return profiles.filter(({ perfil }) => (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 2);
 }
 
 export function nextSeniority(current: string | null): string {
@@ -329,9 +443,9 @@ export function findRecentPromotions(profiles: readonly PerfilComHistorico[], co
 
 export function buildCycleColumns(profiles: readonly PerfilComHistorico[]) {
   return {
-    meta1: profiles.filter(({ perfil }) => perfil.progresso_meta3 === 0),
-    meta2: profiles.filter(({ perfil }) => perfil.progresso_meta3 === 1),
-    meta3: profiles.filter(({ perfil }) => perfil.progresso_meta3 === 2),
+    meta1: profiles.filter(({ perfil }) => (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 0),
+    meta2: profiles.filter(({ perfil }) => (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 1),
+    meta3: profiles.filter(({ perfil }) => (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 2),
   };
 }
 

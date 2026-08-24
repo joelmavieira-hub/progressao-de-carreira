@@ -158,4 +158,64 @@ describe("CareerProgressionBoard", () => {
     expect(promotedColumn)
       .not.toHaveTextContent("Júnior 1 → Júnior 1");
   });
+  it("mantém junho/julho no squad histórico quando o squad atual muda em agosto", () => {
+    const ana = {
+      ...profile(
+        "ana-historico",
+        "Ana Histórico",
+        1,
+      ),
+      squad_atual: "Gorila",
+    };
+
+    const junho = {
+      ...result(
+        "ana-jun",
+        "ana-historico",
+      ),
+      competencia: "2026-06-01",
+      mes_referencia: "2026-06-01",
+      squad: "Urso",
+      recebeu_promocao: false,
+      created_at: "2026-06-01T00:00:00Z",
+      updated_at: "2026-06-01T00:00:00Z",
+    };
+    const julho = { ...junho, id: "ana-jul", competencia: "2026-07-01", mes_referencia: "2026-07-01", created_at: "2026-07-01T00:00:00Z", updated_at: "2026-07-01T00:00:00Z" };
+    const agosto = { ...junho, id: "ana-ago", competencia: "2026-08-01", mes_referencia: "2026-08-01", squad: "Gorila", created_at: "2026-08-01T00:00:00Z", updated_at: "2026-08-01T00:00:00Z" };
+
+    render(
+      <CareerProgressionBoard
+        perfis={[ana]}
+        resultados={[junho, julho, agosto]}
+        perfisComHistorico={relacionarPerfisEResultados(
+          [ana],
+          [junho, julho, agosto],
+        )}
+      />,
+    );
+
+    expect(
+      screen.getByText("Gorila · SDR"),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ver histórico" }));
+    expect(screen.getAllByText("Urso")).toHaveLength(2);
+    expect(screen.getByText("Gorila")).toBeInTheDocument();
+  });
+  it("renderiza bonificação roxa somente para SDR com 30% ou 40% e preserva os demais badges", () => {
+    const sdr40 = { ...profile("sdr40", "SDR Quarenta", 2), progresso_ciclo: 2, progresso_meta2: 1, progresso_meta3: 1, bonificacao_sdr: 40 };
+    const sdr30 = { ...profile("sdr30", "SDR Trinta", 1), progresso_ciclo: 1, progresso_meta2: 0, bonificacao_sdr: 30 };
+    const sdr0 = { ...profile("sdr0", "SDR Zero", 0), progresso_ciclo: 0, bonificacao_sdr: 0 };
+    const closer = { ...profile("closer", "Closer Quarenta", 0), posicao_atual: "Closer", progresso_ciclo: 0, bonificacao_sdr: 40 };
+    const perfis = [sdr40, sdr30, sdr0, closer];
+    const resultados = perfis.map((item) => ({ ...result(`r-${item.id}`, item.id), posicao: item.posicao_atual }));
+    render(<CareerProgressionBoard perfis={perfis} resultados={resultados} perfisComHistorico={relacionarPerfisEResultados(perfis, resultados)} />);
+
+    const badge40 = screen.getByText("Bonificação: 40%");
+    const badge30 = screen.getByText("Bonificação: 30%");
+    expect(badge40).toHaveClass("bg-purple-100", "text-purple-800");
+    expect(badge30).toHaveClass("bg-purple-100", "text-purple-800");
+    expect(screen.getByText("SDR Quarenta").closest(".bg-white")).toHaveTextContent("AtivoPróximo da promoçãoBonificação: 40%");
+    expect(screen.getByText("SDR Zero").closest(".bg-white")).not.toHaveTextContent("Bonificação:");
+    expect(screen.getByText("Closer Quarenta").closest(".bg-white")).not.toHaveTextContent("Bonificação:");
+  });
 });

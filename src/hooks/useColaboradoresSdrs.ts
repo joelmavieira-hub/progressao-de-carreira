@@ -101,7 +101,7 @@ export function buildCareerData(
       level,
       position: profile.posicao_atual,
       squad,
-      currentProgress: profile.progresso_meta3,
+      currentProgress: profile.progresso_ciclo ?? profile.progresso_meta3,
       avatarColor: "270 70% 60%",
       history: (historyById.get(profile.id) ?? []).sort((a, b) =>
         (a.competence as string).localeCompare(b.competence as string),

@@ -3,7 +3,7 @@ import { relacionarPerfisEResultados } from "../domain";
 import type { ColaboradorPerfil, ColaboradorResultado, PerfilComHistorico } from "../types";
 import {
   buildCareerPromotions, buildCycleColumns, calculateCoverage, countUniqueCareerPromoted, countUniquePromoted,
-  distributeCycle, distributeSeniority, filterHistoricalResults, filterProfiles,
+  distributeCycle, distributeSeniority, filterHistoricalResults, filterProfiles, filterProfilesByHistoricalSquad, listSquadsByCompetence,
   findNearPromotion, findRecentPromotions, groupCareerPromotionsByCompetence, groupGoalsByCompetence,
   groupProgressBySquad, groupPromotionsByCompetence, listCompetences, nextSeniority, normalizeSearch, type AnalyticsFilters,
 } from "./analytics";
@@ -141,5 +141,74 @@ describe("analytics", () => {
       seniority: 1,
       roleTransition: 1,
     });
+  });
+  it("usa o squad da competência em filtros e agrupamentos históricos", () => {
+    const pessoa = profile(
+      "historico-squad",
+      {
+        squad_atual: "Gorila",
+        progresso_meta3: 1,
+      },
+    );
+
+    const data = related(
+      [pessoa],
+      [
+        result(
+          "historico-jul",
+          "historico-squad",
+          "2026-07-01",
+          "Meta 2",
+          false,
+          {
+            squad: "Urso",
+          },
+        ),
+        result(
+          "historico-ago",
+          "historico-squad",
+          "2026-08-01",
+          "Meta 2",
+          false,
+          {
+            squad: "Gorila",
+          },
+        ),
+      ],
+    );
+
+    expect(
+      listSquadsByCompetence(
+        data,
+        "2026-07-01",
+      ),
+    ).toEqual(["Urso"]);
+
+    expect(
+      filterProfilesByHistoricalSquad(
+        data,
+        filters({
+          competence: "2026-07-01",
+          squad: "Urso",
+        }),
+      ),
+    ).toHaveLength(1);
+
+    expect(
+      filterProfilesByHistoricalSquad(
+        data,
+        filters({
+          competence: "2026-07-01",
+          squad: "Gorila",
+        }),
+      ),
+    ).toHaveLength(0);
+
+    expect(
+      groupProgressBySquad(
+        data,
+        "2026-07-01",
+      ).map((row) => row.squad),
+    ).toEqual(["Urso"]);
   });
 });

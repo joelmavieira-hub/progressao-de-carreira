@@ -38,6 +38,25 @@ function history(rows: Result[]): MonthRecord[] {
   });
 }
 
+function foldedPosition(value: string | null | undefined): string {
+  return (value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
+}
+
+function compactGoal(value: string | null | undefined): string {
+  const goal = normalizeGoal(value);
+  return ({ meta1: "M1", meta2: "M2", meta3: "M3", below: "NM", absent: "SP" } as const)[goal ?? "absent"];
+}
+
+function promotionLabels(rows: Result[], promotionCompetences: string[], roleCompetences: string[]) {
+  const old = rows.filter((row) => row.competencia && row.competencia >= "2026-06-01" && row.recebeu_promocao)
+    .map((row) => `senioridade ${row.competencia}`);
+  const newer = [
+    ...promotionCompetences.map((competence) => `senioridade ${competence}`),
+    ...roleCompetences.map((competence) => `função ${competence}`),
+  ];
+  return { old: old.length ? old.join(", ") : "Não", newer: newer.length ? newer.join(", ") : "Não" };
+}
+
 /** Confirmed data correction used only by the read-only comparison, never by domain rules. */
 function applyConfirmedCorrections(profile: Profile, rows: Result[]): Result[] {
   const name = normalizeName(profile.nome_colaborador);
@@ -84,8 +103,16 @@ async function main() {
     const correctedHistory = history(correctedRows);
     const state = computeProgression(correctedHistory, profile.senioridade_atual);
     const positionAfter = getCurrentPosition(correctedHistory);
+    const finalIsSdr = foldedPosition(profile.posicao_atual) === "SDR";
+    const bonusAfter = finalIsSdr ? state.sdrBonus : 0;
+    const bonusStreakAfter = finalIsSdr ? state.sdrBonusStreak : 0;
+    const promotions = promotionLabels(correctedRows, state.promotionCompetences, state.sdrToCloserCompetences);
     const reasons = [
       profile.progresso_meta3 !== state.meta3Streak ? "progresso divergente da reconstrução histórica" : null,
+      typeof profile.progresso_meta2 === "number" && profile.progresso_meta2 !== state.meta2Count ? "âncora Meta 2 divergente da reconstrução histórica" : null,
+      typeof profile.progresso_ciclo === "number" && profile.progresso_ciclo !== state.cycleProgress ? "etapa do ciclo divergente da reconstrução histórica" : null,
+      typeof profile.bonificacao_sdr === "number" && profile.bonificacao_sdr !== state.sdrBonus ? "bonificação SDR divergente da reconstrução histórica" : null,
+      typeof profile.streak_meta3_bonificacao === "number" && profile.streak_meta3_bonificacao !== state.sdrBonusStreak ? "streak de bonificação divergente da reconstrução histórica" : null,
       profile.senioridade_atual !== state.seniorityAtPeriod ? "senioridade divergente da prioridade histórica" : null,
       profile.posicao_atual !== positionAfter ? "posição atual divergente do histórico corrigido" : null,
       state.sdrToCloserCompetences.length ? `reset SDR→Closer em ${state.sdrToCloserCompetences.at(-1)}` : null,
@@ -94,16 +121,25 @@ async function main() {
       id: profile.id, nome: profile.nome_colaborador, antes: profile.progresso_meta3,
       depois: state.meta3Streak, senioridadeAntes: profile.senioridade_atual,
       senioridadeDepois: state.seniorityAtPeriod, resetCompetencia: state.resetCompetence,
+      meta2Antes: profile.progresso_meta2, meta2Depois: state.meta2Count,
+      cicloAntes: profile.progresso_ciclo, cicloDepois: state.cycleProgress,
+      bonificacaoAntes: profile.bonificacao_sdr, bonificacaoDepois: bonusAfter,
+      streakBonusAntes: profile.streak_meta3_bonificacao, streakBonusDepois: bonusStreakAfter,
       posicaoAntes: profile.posicao_atual, posicaoDepois: positionAfter,
       metas3Consideradas: state.currentCycleMeta3Competences,
       mudancasSdrParaCloser: state.sdrToCloserCompetences,
       promocoes: state.promotionCompetences,
+      promocaoAntiga: promotions.old,
+      promocaoNova: promotions.newer,
       conclusoesDeCiclo: state.cycleCompletionCompetences,
       motivos: reasons,
       correcoesConfirmadasSimuladas: ["Miguel Carneiro Nunes", "Tatyanna Lima de Freitas", "João Paulo Maciel Sousa"]
         .some((name) => normalizeName(profile.nome_colaborador) === normalizeName(name)),
-      alteracaoPrevista: reasons.some((reason) => !reason.startsWith("reset SDR→Closer"))
-        || profile.progresso_meta3 !== state.meta3Streak,
+      alteracaoPrevista: profile.progresso_meta3 !== state.meta3Streak
+        || profile.senioridade_atual !== state.seniorityAtPeriod
+        || state.meta2Count !== 0 || bonusAfter !== 0 || bonusStreakAfter !== 0,
+      metasDesdeJunho: correctedRows.filter((row) => row.competencia && row.competencia >= "2026-06-01")
+        .map((row) => `${row.competencia}:${compactGoal(row.meta_alcancada)}`),
     };
   });
   const named = [
@@ -123,10 +159,59 @@ async function main() {
   const report = {
     mode: "dry-run-read-only", generatedAt: new Date().toISOString(), productionWrites: 0,
     decisions: { miguelLastSdrCompetence: "2026-06-01", miguelFirstCloserCompetence: "2026-07-01", miguelJulyGoal: "Sem presença", miguelAugustGoal: "Sem presença", senior3ThirdMetaCompletesWithoutPromotion: true },
-    summary: { profiles: profiles?.length ?? 0, results: results.length, duplicateCompetences: new Set(duplicateKeys).size, proposedChanges: comparisons.filter((row) => row.alteracaoPrevista).length },
+    summary: {
+      profiles: profiles?.length ?? 0,
+      results: results.length,
+      duplicateCompetences: new Set(duplicateKeys).size,
+      schemaReady: (profiles as Profile[]).every((profile) => typeof profile.progresso_meta2 === "number" && typeof profile.bonificacao_sdr === "number"),
+      proposedChanges: comparisons.filter((row) => row.alteracaoPrevista).length,
+      projectedBonus30: comparisons.filter((row) => row.bonificacaoDepois === 30).length,
+      projectedBonus40: comparisons.filter((row) => row.bonificacaoDepois === 40).length,
+      projectedNearPromotion: comparisons.filter((row) => row.cicloDepois === 2).length,
+      referenceReplaySecondPassDifferences: (profiles as Profile[]).filter((profile) => {
+        const sourceRows = applyConfirmedCorrections(profile, byProfile.get(profile.id) ?? []);
+        return JSON.stringify(computeProgression(history(sourceRows), profile.senioridade_atual))
+          !== JSON.stringify(computeProgression(history(sourceRows), profile.senioridade_atual));
+      }).length,
+    },
     namedCases: named, inconsistencies: comparisons.filter((row) => row.alteracaoPrevista), comparisons,
   };
-  const output = process.argv.includes("--named-only") ? { ...report, comparisons: undefined } : report;
+  if (process.argv.includes("--validation-tables")) {
+    const impacted = comparisons.filter((row) => row.alteracaoPrevista).map((row) => ({
+      colaborador: row.nome,
+      posicao: row.posicaoAntes ?? "Não informada",
+      metas: row.metasDesdeJunho.join(" ") || "Sem resultados",
+      senioridadeAntes: row.senioridadeAntes ?? "Não informada",
+      senioridadeDepois: row.senioridadeDepois ?? "Não informada",
+      cicloAntes: `${row.antes} M3 (legado)`,
+      cicloDepois: row.cicloDepois === 0 ? "0/3" : `${row.cicloDepois}/3 (${row.depois} M3 + ${row.meta2Depois} M2)`,
+      promocaoAntiga: row.promocaoAntiga,
+      promocaoNova: row.promocaoNova,
+      competenciaPromocao: [...row.promocoes, ...row.mudancasSdrParaCloser].join(", ") || "—",
+      bonificacao: `${row.bonificacaoDepois}%`,
+      motivo: [
+        row.antes !== row.depois ? "progresso legado diverge do replay" : null,
+        row.meta2Depois ? "Meta 2 compõe/ancora o ciclo" : null,
+        row.senioridadeAntes !== row.senioridadeDepois ? "senioridade recalculada" : null,
+        row.promocaoAntiga !== row.promocaoNova ? "promoções recalculadas" : null,
+        row.mudancasSdrParaCloser.length ? "reset SDR→Closer" : null,
+        row.bonificacaoDepois ? "bonificação materializada" : null,
+        row.streakBonusDepois ? `streak SDR=${row.streakBonusDepois}` : null,
+      ].filter(Boolean).join("; ") || "novo estado materializado",
+    }));
+    const sdrRows = (profiles as Profile[]).filter((profile) => foldedPosition(profile.posicao_atual) === "SDR").map((profile) => {
+      const sourceRows = applyConfirmedCorrections(profile, byProfile.get(profile.id) ?? []);
+      const state = computeProgression(history(sourceRows), profile.senioridade_atual);
+      const byCompetence = new Map(sourceRows.map((row) => [row.competencia, compactGoal(row.meta_alcancada)]));
+      return { colaborador: profile.nome_colaborador, jun: byCompetence.get("2026-06-01") ?? "—", jul: byCompetence.get("2026-07-01") ?? "—",
+        ago: byCompetence.get("2026-08-01") ?? "—", set: byCompetence.get("2026-09-01") ?? "—", streak: state.sdrBonusStreak, bonificacao: state.sdrBonus };
+    });
+    process.stdout.write(`${JSON.stringify({ summary: report.summary, impacted, sdrRows }, null, 2)}\n`);
+    return;
+  }
+  const output = process.argv.includes("--summary-only")
+    ? { mode: report.mode, generatedAt: report.generatedAt, productionWrites: report.productionWrites, summary: report.summary }
+    : process.argv.includes("--named-only") ? { ...report, inconsistencies: undefined, comparisons: undefined } : report;
   process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
 }
 

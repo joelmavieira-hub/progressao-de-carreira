@@ -75,45 +75,93 @@ export type Database = {
       }
       colaboradores_perfis: {
         Row: {
+          bonificacao_sdr: number
           created_at: string
           id: string
           jornada_atual: string | null
           nome_colaborador: string
           nome_normalizado: string
           posicao_atual: string | null
+          progresso_ciclo: number
+          progresso_meta2: number
           progresso_meta3: number
           senioridade_atual: string | null
           squad_atual: string | null
+          streak_meta3_bonificacao: number
           ativo: boolean
           updated_at: string
         }
         Insert: {
+          bonificacao_sdr?: number
           created_at?: string
           id?: string
           jornada_atual?: string | null
           nome_colaborador: string
           nome_normalizado: string
           posicao_atual?: string | null
+          progresso_ciclo?: number
+          progresso_meta2?: number
           progresso_meta3?: number
           senioridade_atual?: string | null
           squad_atual?: string | null
+          streak_meta3_bonificacao?: number
           ativo?: boolean
           updated_at?: string
         }
         Update: {
+          bonificacao_sdr?: number
           created_at?: string
           id?: string
           jornada_atual?: string | null
           nome_colaborador?: string
           nome_normalizado?: string
           posicao_atual?: string | null
+          progresso_ciclo?: number
+          progresso_meta2?: number
           progresso_meta3?: number
           senioridade_atual?: string | null
           squad_atual?: string | null
+          streak_meta3_bonificacao?: number
           ativo?: boolean
           updated_at?: string
         }
         Relationships: []
+      }
+      career_progression_events: {
+        Row: {
+          colaborador_id: string
+          competencia: string
+          created_at: string
+          event_type: string
+          id: string
+          recebeu_promocao: boolean
+          senioridade: string
+        }
+        Insert: {
+          colaborador_id: string
+          competencia: string
+          created_at?: string
+          event_type: string
+          id?: string
+          recebeu_promocao?: boolean
+          senioridade: string
+        }
+        Update: {
+          colaborador_id?: string
+          competencia?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          recebeu_promocao?: boolean
+          senioridade?: string
+        }
+        Relationships: [{
+          foreignKeyName: "career_progression_events_colaborador_id_fkey"
+          columns: ["colaborador_id"]
+          isOneToOne: false
+          referencedRelation: "colaboradores_perfis"
+          referencedColumns: ["id"]
+        }]
       }
       career_migration_issues: {
         Row: {
