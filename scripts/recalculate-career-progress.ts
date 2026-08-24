@@ -111,8 +111,8 @@ async function main() {
       profile.progresso_meta3 !== state.meta3Streak ? "progresso divergente da reconstrução histórica" : null,
       typeof profile.progresso_meta2 === "number" && profile.progresso_meta2 !== state.meta2Count ? "âncora Meta 2 divergente da reconstrução histórica" : null,
       typeof profile.progresso_ciclo === "number" && profile.progresso_ciclo !== state.cycleProgress ? "etapa do ciclo divergente da reconstrução histórica" : null,
-      typeof profile.bonificacao_sdr === "number" && profile.bonificacao_sdr !== state.sdrBonus ? "bonificação SDR divergente da reconstrução histórica" : null,
-      typeof profile.streak_meta3_bonificacao === "number" && profile.streak_meta3_bonificacao !== state.sdrBonusStreak ? "streak de bonificação divergente da reconstrução histórica" : null,
+      typeof profile.bonificacao_sdr === "number" && profile.bonificacao_sdr !== bonusAfter ? "bonificação SDR divergente da reconstrução histórica" : null,
+      typeof profile.streak_meta3_bonificacao === "number" && profile.streak_meta3_bonificacao !== bonusStreakAfter ? "streak de bonificação divergente da reconstrução histórica" : null,
       profile.senioridade_atual !== state.seniorityAtPeriod ? "senioridade divergente da prioridade histórica" : null,
       profile.posicao_atual !== positionAfter ? "posição atual divergente do histórico corrigido" : null,
       state.sdrToCloserCompetences.length ? `reset SDR→Closer em ${state.sdrToCloserCompetences.at(-1)}` : null,
@@ -136,8 +136,11 @@ async function main() {
       correcoesConfirmadasSimuladas: ["Miguel Carneiro Nunes", "Tatyanna Lima de Freitas", "João Paulo Maciel Sousa"]
         .some((name) => normalizeName(profile.nome_colaborador) === normalizeName(name)),
       alteracaoPrevista: profile.progresso_meta3 !== state.meta3Streak
-        || profile.senioridade_atual !== state.seniorityAtPeriod
-        || state.meta2Count !== 0 || bonusAfter !== 0 || bonusStreakAfter !== 0,
+        || profile.progresso_meta2 !== state.meta2Count
+        || profile.progresso_ciclo !== state.cycleProgress
+        || profile.bonificacao_sdr !== bonusAfter
+        || profile.streak_meta3_bonificacao !== bonusStreakAfter
+        || profile.senioridade_atual !== state.seniorityAtPeriod,
       metasDesdeJunho: correctedRows.filter((row) => row.competencia && row.competencia >= "2026-06-01")
         .map((row) => `${row.competencia}:${compactGoal(row.meta_alcancada)}`),
     };
