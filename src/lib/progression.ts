@@ -52,6 +52,9 @@ export interface ProgressionState {
   currentCycleMeta3Competences: string[];
   promotionCompetences: string[];
   sdrToCloserCompetences: string[];
+  firstCloserCompetence: string | null;
+  rampingIgnoredCompetence: string | null;
+  closerRampingMetaConsumed: boolean;
 }
 
 export interface MonthlyProgressionResult {
@@ -109,7 +112,7 @@ export function normalizeGoal(value: string | null | undefined): GoalLevel | nul
   if (normalized === "META 2") return "meta2";
   if (normalized === "META 3") return "meta3";
   if (normalized === "NENHUMA META" || normalized === "SEM META" || normalized === "SEM REGISTRO") return "below";
-  if (normalized === "SEM PRESENCA" || normalized === "AUSENTE") return "absent";
+  if (normalized === "SEM PRESENCA" || normalized === "AUSENTE" || normalized === "META NAO DEFINIDA") return "absent";
   return null;
 }
 
@@ -151,10 +154,16 @@ export function processCareerGoal(state: CareerRuleState, goal: GoalLevel, isSdr
   let { seniority, meta3, meta2, bonus, bonusStreak } = state;
   let receivedPromotion = false;
   let cycleCompleted = false;
-  if (goal === "meta1") { meta3 = 0; meta2 = 0; }
-  if (goal === "meta2") { if (meta2 === 1) meta3 = 0; meta2 = 1; }
-  if (goal === "meta3") meta3 += 1;
-  if (meta3 >= 3 || (meta3 >= 2 && meta2 === 1)) {
+  if (isSdr) {
+    if (goal === "meta1") { meta3 = 0; meta2 = 0; }
+    if (goal === "meta2") { if (meta2 === 1) meta3 = 0; meta2 = 1; }
+    if (goal === "meta3") meta3 += 1;
+  } else {
+    meta2 = 0;
+    if (goal === "meta1" || goal === "meta2") meta3 = 0;
+    if (goal === "meta3") meta3 += 1;
+  }
+  if (meta3 >= 3 || (isSdr && meta3 >= 2 && meta2 === 1)) {
     const next = getNextSeniority(seniority);
     meta3 = 0; meta2 = 0; cycleCompleted = true;
     if (next) { seniority = next; receivedPromotion = true; }
@@ -197,6 +206,10 @@ function normalizedPosition(value: string | null | undefined): string {
   return fold(value ?? "");
 }
 
+export function isEffectiveGoal(goal: GoalLevel): boolean {
+  return goal === "meta1" || goal === "meta2" || goal === "meta3";
+}
+
 export function getCurrentSquad(history: readonly MonthRecord[], throughCompetence?: string | null): string | null {
   return [...recordsThrough(history, throughCompetence)].reverse().find((record) => record.squad?.trim())?.squad?.trim() ?? null;
 }
@@ -217,6 +230,7 @@ export function parseLegacyCompetence(value: string | null | undefined, baseYear
 export function computeProgression(history: readonly MonthRecord[], currentSeniority?: string | null, throughCompetence?: string | null): ProgressionState {
   const ordered = uniqueRecordsByCompetence(history, throughCompetence);
   const epoch = "2026-06-01";
+  const firstCloserCompetence = ordered.find((record) => normalizedPosition(record.position) === "CLOSER")?.competence ?? null;
   const beforeEpoch = ordered.filter((record) => (record.competence as string) < epoch);
   const eligible = ordered.filter((record) => (record.competence as string) >= epoch);
   const baseline = beforeEpoch.at(-1);
@@ -234,6 +248,21 @@ export function computeProgression(history: readonly MonthRecord[], currentSenio
   let resetCompetence: string | null = null;
   let lastGoal: GoalLevel | null = null;
   let previousPosition: string | null = baseline ? normalizedPosition(baseline.position) : null;
+  let closerRampingMetaConsumed = false;
+  let rampingIgnoredCompetence: string | null = null;
+  let positionDuringRampingScan: string | null = null;
+  for (const record of beforeEpoch) {
+    const position = normalizedPosition(record.position);
+    if (position === "CLOSER" && positionDuringRampingScan !== "CLOSER") {
+      closerRampingMetaConsumed = false;
+      rampingIgnoredCompetence = null;
+    }
+    if (position === "CLOSER" && !closerRampingMetaConsumed && isEffectiveGoal(record.goal)) {
+      closerRampingMetaConsumed = true;
+      rampingIgnoredCompetence = record.competence ?? null;
+    }
+    if (position) positionDuringRampingScan = position;
+  }
   const cycleCompletionCompetences: string[] = [];
   let currentCycleMeta3Competences: string[] = [];
   const promotionCompetences: string[] = [];
@@ -241,29 +270,40 @@ export function computeProgression(history: readonly MonthRecord[], currentSenio
   for (const record of eligible) {
     const historicalPosition = normalizedPosition(record.position);
     const informedSeniority = normalizeSeniority(record.informedSeniority);
-    if (previousPosition === "SDR" && historicalPosition === "CLOSER") {
+    const roleChanged = previousPosition === "SDR" && historicalPosition === "CLOSER";
+    const enteredCloser = historicalPosition === "CLOSER" && previousPosition !== "CLOSER";
+    if (enteredCloser) {
+      closerRampingMetaConsumed = false;
+      rampingIgnoredCompetence = null;
+    }
+    if (roleChanged) {
       meta3 = 0; meta2 = 0; bonus = 0; bonusStreak = 0;
       seniority = informedSeniority ?? seniority;
       currentCycleMeta3Competences = [];
       wasReset = true; resetCompetence = record.competence ?? null; lastGoal = record.goal;
-      if (record.competence) sdrToCloserCompetences.push(record.competence);
-      previousPosition = historicalPosition;
-      continue;
-    }
-    if (historicalPosition) previousPosition = historicalPosition;
-    if (informedSeniority && informedSeniority !== seniority) {
+      if (roleChanged && record.competence) sdrToCloserCompetences.push(record.competence);
+    } else if (informedSeniority && informedSeniority !== seniority) {
       seniority = informedSeniority; meta3 = 0; meta2 = 0; currentCycleMeta3Competences = [];
       wasReset = true; resetCompetence = record.competence ?? null;
     }
+    if (historicalPosition === "CLOSER" && !closerRampingMetaConsumed && isEffectiveGoal(record.goal)) {
+      closerRampingMetaConsumed = true;
+      rampingIgnoredCompetence = record.competence ?? null;
+      lastGoal = record.goal;
+      if (historicalPosition) previousPosition = historicalPosition;
+      continue;
+    }
+    if (historicalPosition) previousPosition = historicalPosition;
     if (!seniority) continue;
     lastGoal = record.goal;
+    const isSdr = historicalPosition === "SDR";
     const previousMeta2 = meta2;
-    const result = processCareerGoal({ seniority, meta3, meta2, bonus, bonusStreak }, record.goal, historicalPosition === "SDR");
+    const result = processCareerGoal({ seniority, meta3, meta2, bonus, bonusStreak }, record.goal, isSdr);
     if (result.cycleCompleted) {
       wasReset = true; resetCompetence = record.competence ?? null;
       if (record.competence) cycleCompletionCompetences.push(record.competence);
       currentCycleMeta3Competences = [];
-    } else if (record.goal === "meta1" || (record.goal === "meta2" && previousMeta2 === 1)) {
+    } else if (record.goal === "meta1" || (record.goal === "meta2" && (!isSdr || previousMeta2 === 1))) {
       currentCycleMeta3Competences = [];
     } else if (record.goal === "meta3" && record.competence) currentCycleMeta3Competences.push(record.competence);
     if (result.receivedPromotion && record.competence) promotionCompetences.push(record.competence);
@@ -271,11 +311,62 @@ export function computeProgression(history: readonly MonthRecord[], currentSenio
     bonus = result.bonus; bonusStreak = result.bonusStreak;
   }
   const isCareerTop = seniority === "Sênior 3";
-  const cycleProgress = meta3 + meta2;
+  const cycleProgress = previousPosition === "CLOSER" ? meta3 : meta3 + meta2;
   return { meta3Streak: meta3, meta2Count: meta2, cycleProgress, sdrBonus: bonus, sdrBonusStreak: bonusStreak,
     tier: cycleProgress >= 2 ? 2 : 1, wasReset, readyForLevelUp: cycleProgress === 2 && !isCareerTop,
     isCareerTop, lastGoal, seniorityAtPeriod: seniority, resetCompetence, cycleCompletionCompetences,
-    currentCycleMeta3Competences, promotionCompetences, sdrToCloserCompetences };
+    currentCycleMeta3Competences, promotionCompetences, sdrToCloserCompetences,
+    firstCloserCompetence, rampingIgnoredCompetence, closerRampingMetaConsumed };
+}
+
+export interface CloserPromotionProjection {
+  promotionCompetence: string | null;
+  projectedMeta3Competences: string[];
+  rampingMetaCompetence: string | null;
+}
+
+function addCompetenceMonths(competence: string, months: number): string | null {
+  const match = /^(\d{4})-(\d{2})-01$/.exec(competence);
+  if (!match) return null;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1 + months, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-01`;
+}
+
+/** Projection is read-only: the latest neutral competence is an available slot, not historical progress. */
+export function projectNextCloserPromotion(
+  history: readonly MonthRecord[], currentSeniority?: string | null, throughCompetence?: string | null,
+): CloserPromotionProjection {
+  const ordered = uniqueRecordsByCompetence(history, throughCompetence);
+  const latest = ordered.at(-1);
+  if (!latest?.competence || normalizedPosition(latest.position) !== "CLOSER") {
+    return { promotionCompetence: null, projectedMeta3Competences: [], rampingMetaCompetence: null };
+  }
+  const state = computeProgression(ordered, currentSeniority, throughCompetence);
+  let competence = latest.competence;
+  if (isEffectiveGoal(latest.goal)) {
+    const next = addCompetenceMonths(competence, 1);
+    if (!next) return { promotionCompetence: null, projectedMeta3Competences: [], rampingMetaCompetence: null };
+    competence = next;
+  }
+  let rampingConsumed = state.closerRampingMetaConsumed;
+  let rampingMetaCompetence: string | null = null;
+  let streak = state.meta3Streak;
+  const projectedMeta3Competences: string[] = [];
+  while (streak < 3) {
+    if (!rampingConsumed) {
+      rampingConsumed = true;
+      rampingMetaCompetence = competence;
+    } else {
+      streak += 1;
+      projectedMeta3Competences.push(competence);
+    }
+    if (streak < 3) {
+      const next = addCompetenceMonths(competence, 1);
+      if (!next) return { promotionCompetence: null, projectedMeta3Competences, rampingMetaCompetence };
+      competence = next;
+    }
+  }
+  return { promotionCompetence: competence, projectedMeta3Competences, rampingMetaCompetence };
 }
 
 export function getPromotionBand(seniority: string, progress: number, promotedInPeriod = false): PromotionBand {
@@ -321,8 +412,9 @@ export function formatarEtapaProgresso(progresso: number): string {
   return "Etapa não informada";
 }
 
-export function formatarComposicaoCiclo(meta3: number, meta2: number): string {
-  const parts = [meta3 ? `${meta3} Meta 3` : null, meta2 ? `${meta2} Meta 2` : null].filter(Boolean);
+export function formatarComposicaoCiclo(meta3: number, meta2: number, position?: string | null): string {
+  const effectiveMeta2 = normalizedPosition(position) === "CLOSER" ? 0 : meta2;
+  const parts = [meta3 ? `${meta3} Meta 3` : null, effectiveMeta2 ? `${effectiveMeta2} Meta 2` : null].filter(Boolean);
   return parts.length ? parts.join(" + ") : "Ciclo sem metas válidas";
 }
 

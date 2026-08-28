@@ -4,7 +4,8 @@ BEGIN;
 CREATE OR REPLACE FUNCTION pg_temp.seed_career_case(
   case_name text,
   goals text[],
-  positions text[] DEFAULT NULL
+  positions text[] DEFAULT NULL,
+  preexisting_closer boolean DEFAULT false
 ) RETURNS uuid LANGUAGE plpgsql AS $$
 DECLARE person uuid := gen_random_uuid(); i integer; position_value text;
 BEGIN
@@ -14,6 +15,15 @@ BEGIN
     person,case_name,public.normalize_career_name(case_name),
     coalesce(positions[array_length(goals,1)],'SDR'),'Teste','Júnior 1'
   );
+  IF preexisting_closer THEN
+    INSERT INTO public.colaboradores(
+      colaborador_id,competencia,mes_referencia,nome_colaborador,posicao,squad,
+      meta_alcancada,senioridade_informada,senioridade,recebeu_promocao,origem
+    ) VALUES (
+      person,date '2026-05-01','2026-05',case_name,'Closer','Teste',
+      'Meta 3','Júnior 1','Júnior 1',false,'test_v2'
+    );
+  END IF;
   FOR i IN 1..array_length(goals,1) LOOP
     position_value:=coalesce(positions[i],'SDR');
     INSERT INTO public.colaboradores(
@@ -112,6 +122,68 @@ BEGIN
   END IF;
   IF (SELECT count(*) FROM public.career_progression_events WHERE colaborador_id=p AND event_type='role_promotion')<>1 THEN
     RAISE EXCEPTION 'promoção de função não foi deduplicada';
+  END IF;
+
+  p:=pg_temp.seed_career_case('ZZ V2 Ramping após vazio',ARRAY['Meta 3','Sem presença','Meta 3'],ARRAY['SDR','Closer','Closer']);
+  IF NOT EXISTS(SELECT 1 FROM public.colaboradores_perfis WHERE id=p AND progresso_meta3=0 AND progresso_meta2=0) THEN
+    RAISE EXCEPTION 'primeira meta efetiva após entrada vazia não foi consumida pelo ramping';
+  END IF;
+
+  p:=pg_temp.seed_career_case('ZZ V2 Ramping após dois vazios',ARRAY['Meta 3','Sem presença','Nenhuma meta','Meta 3'],ARRAY['SDR','Closer','Closer','Closer']);
+  IF NOT EXISTS(SELECT 1 FROM public.colaboradores_perfis WHERE id=p AND progresso_meta3=0 AND progresso_meta2=0) THEN
+    RAISE EXCEPTION 'vazios consumiram ramping antes da primeira meta efetiva';
+  END IF;
+
+  -- Closer has its own machine: only three consecutive M3 promote.
+  p:=pg_temp.seed_career_case('ZZ V2 Closer M333',ARRAY['Meta 3','Meta 3','Meta 3'],ARRAY['Closer','Closer','Closer'],true);
+  IF NOT EXISTS(SELECT 1 FROM public.colaboradores_perfis WHERE id=p AND senioridade_atual='Júnior 2' AND progresso_ciclo=0 AND progresso_meta2=0)
+     OR NOT EXISTS(SELECT 1 FROM public.colaboradores WHERE colaborador_id=p AND competencia=date '2026-08-01' AND recebeu_promocao) THEN
+    RAISE EXCEPTION 'Closer M3 M3 M3 não promoveu em agosto';
+  END IF;
+
+  p:=pg_temp.seed_career_case('ZZ V2 Closer M323',ARRAY['Meta 3','Meta 2','Meta 3'],ARRAY['Closer','Closer','Closer'],true);
+  IF NOT EXISTS(SELECT 1 FROM public.colaboradores_perfis WHERE id=p AND senioridade_atual='Júnior 1' AND progresso_meta3=1 AND progresso_meta2=0 AND progresso_ciclo=1) THEN
+    RAISE EXCEPTION 'Closer M3 M2 M3 não terminou em uma M3';
+  END IF;
+
+  p:=pg_temp.seed_career_case('ZZ V2 Closer M332',ARRAY['Meta 3','Meta 3','Meta 2'],ARRAY['Closer','Closer','Closer'],true);
+  IF NOT EXISTS(SELECT 1 FROM public.colaboradores_perfis WHERE id=p AND progresso_meta3=0 AND progresso_meta2=0 AND progresso_ciclo=0) THEN
+    RAISE EXCEPTION 'Closer M3 M3 M2 não zerou';
+  END IF;
+
+  p:=pg_temp.seed_career_case('ZZ V2 Closer M233',ARRAY['Meta 2','Meta 3','Meta 3'],ARRAY['Closer','Closer','Closer'],true);
+  IF NOT EXISTS(SELECT 1 FROM public.colaboradores_perfis WHERE id=p AND senioridade_atual='Júnior 1' AND progresso_meta3=2 AND progresso_meta2=0 AND progresso_ciclo=2) THEN
+    RAISE EXCEPTION 'Closer M2 M3 M3 não terminou em duas M3';
+  END IF;
+
+  p:=pg_temp.seed_career_case('ZZ V2 Closer M313',ARRAY['Meta 3','Meta 1','Meta 3'],ARRAY['Closer','Closer','Closer'],true);
+  IF NOT EXISTS(SELECT 1 FROM public.colaboradores_perfis WHERE id=p AND progresso_meta3=1 AND progresso_meta2=0) THEN
+    RAISE EXCEPTION 'Closer M3 M1 M3 não terminou em uma M3';
+  END IF;
+
+  FOREACH p IN ARRAY ARRAY[
+    pg_temp.seed_career_case('ZZ V2 Closer Vazio SP',ARRAY['Meta 3','Sem presença','Meta 3','Meta 3'],ARRAY['Closer','Closer','Closer','Closer'],true),
+    pg_temp.seed_career_case('ZZ V2 Closer Vazio NM',ARRAY['Meta 3','Nenhuma meta','Meta 3','Meta 3'],ARRAY['Closer','Closer','Closer','Closer'],true)
+  ] LOOP
+    IF NOT EXISTS(SELECT 1 FROM public.colaboradores_perfis WHERE id=p AND senioridade_atual='Júnior 2' AND progresso_ciclo=0) THEN
+      RAISE EXCEPTION 'vazio quebrou a sequência de Closer: %',p;
+    END IF;
+  END LOOP;
+
+  FOREACH p IN ARRAY ARRAY[
+    pg_temp.seed_career_case('ZZ V2 Ramping M3',ARRAY['Meta 3'],ARRAY['Closer']),
+    pg_temp.seed_career_case('ZZ V2 Ramping M2',ARRAY['Meta 2'],ARRAY['Closer']),
+    pg_temp.seed_career_case('ZZ V2 Ramping M1',ARRAY['Meta 1'],ARRAY['Closer'])
+  ] LOOP
+    IF NOT EXISTS(SELECT 1 FROM public.colaboradores_perfis WHERE id=p AND senioridade_atual='Júnior 1' AND progresso_meta3=0 AND progresso_meta2=0 AND progresso_ciclo=0) THEN
+      RAISE EXCEPTION 'primeiro mês de Closer participou da progressão: %',p;
+    END IF;
+  END LOOP;
+
+  p:=pg_temp.seed_career_case('ZZ V2 Ramping M3333',ARRAY['Meta 3','Meta 3','Meta 3','Meta 3'],ARRAY['Closer','Closer','Closer','Closer']);
+  IF NOT EXISTS(SELECT 1 FROM public.colaboradores WHERE colaborador_id=p AND competencia=date '2026-09-01' AND recebeu_promocao)
+     OR EXISTS(SELECT 1 FROM public.colaboradores WHERE colaborador_id=p AND competencia<date '2026-09-01' AND recebeu_promocao) THEN
+    RAISE EXCEPTION 'Closer foi promovido antes/depois da terceira M3 posterior ao ramping';
   END IF;
 
   -- Historical correction must replay the future and repeated replay must be identical.

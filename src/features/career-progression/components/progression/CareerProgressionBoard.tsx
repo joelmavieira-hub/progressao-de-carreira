@@ -126,7 +126,7 @@ function CycleColumn({ title, description, items, progress, competence, onOpen, 
         <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Bonificação: {item.perfil.bonificacao_sdr}%</Badge>}</div>
       <p className="text-xs text-muted-foreground">{squadForCompetence(item, competence) ? formatarSquadAtual(squadForCompetence(item, competence)!) : "Squad não informado"} · {item.perfil.posicao_atual ?? "Posição não informada"}</p>
       <p className="text-xs text-muted-foreground">{item.perfil.senioridade_atual ?? "Senioridade não informada"} · {formatarEtapaProgresso(progress)}</p>
-      <p className="text-xs text-muted-foreground">{formatarComposicaoCiclo(item.perfil.progresso_meta3, item.perfil.progresso_meta2 ?? 0)}</p>
+      <p className="text-xs text-muted-foreground">{formatarComposicaoCiclo(item.perfil.progresso_meta3, item.perfil.progresso_meta2 ?? 0, item.perfil.posicao_atual)}</p>
       <p className="text-xs"><span className="text-muted-foreground">{competence ? formatarCompetencia(competence) : "Competência"}:</span> {result?.meta_alcancada ?? "Sem resultado"}</p></PersonCard>;
   })}</ColumnShell>;
 }

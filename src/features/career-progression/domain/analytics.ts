@@ -1,4 +1,4 @@
-import { isSquadSaiu } from "../domain";
+import { isSquadSaiu, progressoDeSenioridade } from "../domain";
 import type { ColaboradorPerfil, ColaboradorResultado, PerfilComHistorico, ProfileStatusFilter } from "../types";
 import { detectRoleTransitionPromotions, type CareerPromotionType } from "./promotions";
 
@@ -189,7 +189,7 @@ export function calculateCoverage(profiles: readonly PerfilComHistorico[], compe
 }
 
 export function distributeCycle(profiles: readonly PerfilComHistorico[]) {
-  return [0, 1, 2].map((progress) => ({ progress, total: profiles.filter(({ perfil }) => (perfil.progresso_ciclo ?? perfil.progresso_meta3) === progress).length }));
+  return [0, 1, 2].map((progress) => ({ progress, total: profiles.filter(({ perfil }) => progressoDeSenioridade(perfil) === progress).length }));
 }
 
 export function distributeSeniority(profiles: readonly PerfilComHistorico[]) {
@@ -406,15 +406,15 @@ export function groupProgressBySquad(
       squad,
       meta1: people.filter(
         ({ perfil }) =>
-          (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 0,
+          progressoDeSenioridade(perfil) === 0,
       ).length,
       meta2: people.filter(
         ({ perfil }) =>
-          (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 1,
+          progressoDeSenioridade(perfil) === 1,
       ).length,
       meta3: people.filter(
         ({ perfil }) =>
-          (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 2,
+          progressoDeSenioridade(perfil) === 2,
       ).length,
       total: people.length,
     };
@@ -429,7 +429,7 @@ export function groupProgressBySquad(
 }
 
 export function findNearPromotion(profiles: readonly PerfilComHistorico[]): PerfilComHistorico[] {
-  return profiles.filter(({ perfil }) => (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 2);
+  return profiles.filter(({ perfil }) => progressoDeSenioridade(perfil) === 2);
 }
 
 export function nextSeniority(current: string | null): string {
@@ -443,9 +443,9 @@ export function findRecentPromotions(profiles: readonly PerfilComHistorico[], co
 
 export function buildCycleColumns(profiles: readonly PerfilComHistorico[]) {
   return {
-    meta1: profiles.filter(({ perfil }) => (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 0),
-    meta2: profiles.filter(({ perfil }) => (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 1),
-    meta3: profiles.filter(({ perfil }) => (perfil.progresso_ciclo ?? perfil.progresso_meta3) === 2),
+    meta1: profiles.filter(({ perfil }) => progressoDeSenioridade(perfil) === 0),
+    meta2: profiles.filter(({ perfil }) => progressoDeSenioridade(perfil) === 1),
+    meta3: profiles.filter(({ perfil }) => progressoDeSenioridade(perfil) === 2),
   };
 }
 

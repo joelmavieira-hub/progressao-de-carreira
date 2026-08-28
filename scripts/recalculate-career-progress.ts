@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { computeProgression, getCurrentPosition, normalizeGoal, normalizeName, normalizeSeniority, type MonthRecord } from "../src/lib/progression.ts";
+import { computeProgression, getCurrentPosition, normalizeGoal, normalizeName, normalizeSeniority, projectNextCloserPromotion, type MonthRecord } from "../src/lib/progression.ts";
 import type { Database, Tables } from "../src/integrations/supabase/types.ts";
 
 const BLOCKED_SECRET_PREFIX = "sb_secret_";
@@ -57,31 +57,35 @@ function promotionLabels(rows: Result[], promotionCompetences: string[], roleCom
   return { old: old.length ? old.join(", ") : "Não", newer: newer.length ? newer.join(", ") : "Não" };
 }
 
-/** Confirmed data correction used only by the read-only comparison, never by domain rules. */
-function applyConfirmedCorrections(profile: Profile, rows: Result[]): Result[] {
-  const name = normalizeName(profile.nome_colaborador);
-  if (name === normalizeName("Miguel Carneiro Nunes")) return rows.map((row) => ({
-    ...row,
-    posicao: row.competencia && row.competencia <= "2026-06-01" ? "SDR" : "Closer",
-    senioridade: "Júnior 1",
-    senioridade_informada: "Júnior 1",
-    meta_alcancada: row.competencia && row.competencia >= "2026-07-01" ? "Sem presença" : row.meta_alcancada,
-  }));
-  if (name === normalizeName("Tatyanna Lima de Freitas")) return rows.map((row) => ({
-    ...row,
-    posicao: row.competencia && row.competencia <= "2026-06-01" ? "SDR" : "Closer",
-    senioridade: row.competencia && row.competencia >= "2026-07-01" ? "Júnior 2" : "Júnior 3",
-    senioridade_informada: row.competencia && row.competencia >= "2026-07-01"
-      ? "Júnior 2"
-      : row.competencia && row.competencia >= "2026-04-01" ? "Júnior 3" : null,
-    meta_alcancada: row.competencia && row.competencia >= "2026-07-01" ? "Sem presença" : row.meta_alcancada,
-  }));
-  if (name === normalizeName("João Paulo Maciel Sousa")) return rows.map((row) => ({
-    ...row,
-    posicao: row.competencia && row.competencia < "2026-06-01" ? "SDR" : "Closer",
-  }));
-  return rows;
+function addMonths(competence: string | null | undefined, months: number): string | null {
+  const match = competence?.match(/^(\d{4})-(\d{2})-01$/);
+  if (!match) return null;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1 + months, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-01`;
 }
+
+function projectedNextPromotion(rows: Result[], streak: number): string | null {
+  const latestCompetence = rows.map((row) => row.competencia).filter((value): value is string => Boolean(value)).sort().at(-1);
+  const latest = [...rows].reverse().find((row) => row.competencia === latestCompetence);
+  const latestGoal = normalizeGoal(latest?.meta_alcancada);
+  const firstSlotOffset = latestGoal === "meta1" || latestGoal === "meta2" || latestGoal === "meta3" ? 1 : 0;
+  return addMonths(latestCompetence, firstSlotOffset + Math.max(0, 3 - streak - 1));
+}
+
+const ACCEPTANCE_CASES = new Map([
+  ["Luan Nicolas Sinesio Crisostomo", "2026-09-01"],
+  ["João Paulo Maciel Sousa", "2026-09-01"],
+  ["Miguel Carneiro Nunes", "2026-10-01"],
+  ["Tatyanna Lima de Freitas", "2026-10-01"],
+  ["Leandro Dos Santos Pereira", "2026-10-01"],
+  ["Gustavo Duarte Pinheiro Silva", "2026-09-01"],
+  ["Guilherme da Silva Gomes", "2026-10-01"],
+  ["Letícia Wendy da Silva Alves", "2026-10-01"],
+  ["Diego Nobre do Santos", "2026-11-01"],
+  ["José Albesson Damasceno Silva", null],
+  ["Cleber Rodrigues Souza", "2026-10-01"],
+  ["Johnathan Ranier Brito de Oliveira", "2026-09-01"],
+] as const);
 
 async function main() {
   const { url, key } = config();
@@ -99,14 +103,22 @@ async function main() {
   const duplicateKeys = results.map((row) => `${row.colaborador_id}|${row.competencia}`)
     .filter((key, index, all) => all.indexOf(key) !== index);
   const comparisons = (profiles as Profile[]).map((profile) => {
-    const correctedRows = applyConfirmedCorrections(profile, byProfile.get(profile.id) ?? []);
-    const correctedHistory = history(correctedRows);
-    const state = computeProgression(correctedHistory, profile.senioridade_atual);
-    const positionAfter = getCurrentPosition(correctedHistory);
+    const sourceRows = byProfile.get(profile.id) ?? [];
+    const sourceHistory = history(sourceRows);
+    const state = computeProgression(sourceHistory, profile.senioridade_atual);
+    const positionAfter = getCurrentPosition(sourceHistory);
     const finalIsSdr = foldedPosition(profile.posicao_atual) === "SDR";
     const bonusAfter = finalIsSdr ? state.sdrBonus : 0;
     const bonusStreakAfter = finalIsSdr ? state.sdrBonusStreak : 0;
-    const promotions = promotionLabels(correctedRows, state.promotionCompetences, state.sdrToCloserCompetences);
+    const promotions = promotionLabels(sourceRows, state.promotionCompetences, state.sdrToCloserCompetences);
+    const lastPromotion = [...sourceRows].reverse().find((row) => row.recebeu_promocao)?.competencia ?? null;
+    const previousNextPromotion = projectedNextPromotion(sourceRows, profile.progresso_ciclo ?? profile.progresso_meta3);
+    const isOperationalCloser = profile.ativo
+      && foldedPosition(profile.posicao_atual) === "CLOSER"
+      && foldedPosition(profile.jornada_atual) !== "SAIU"
+      && foldedPosition(profile.squad_atual) !== "SAIU";
+    const projection = isOperationalCloser ? projectNextCloserPromotion(sourceHistory, profile.senioridade_atual) : null;
+    const correctNextPromotion = projection?.promotionCompetence ?? null;
     const reasons = [
       profile.progresso_meta3 !== state.meta3Streak ? "progresso divergente da reconstrução histórica" : null,
       typeof profile.progresso_meta2 === "number" && profile.progresso_meta2 !== state.meta2Count ? "âncora Meta 2 divergente da reconstrução histórica" : null,
@@ -126,42 +138,44 @@ async function main() {
       bonificacaoAntes: profile.bonificacao_sdr, bonificacaoDepois: bonusAfter,
       streakBonusAntes: profile.streak_meta3_bonificacao, streakBonusDepois: bonusStreakAfter,
       posicaoAntes: profile.posicao_atual, posicaoDepois: positionAfter,
+      ativo: profile.ativo, jornada: profile.jornada_atual, squad: profile.squad_atual,
       metas3Consideradas: state.currentCycleMeta3Competences,
       mudancasSdrParaCloser: state.sdrToCloserCompetences,
       promocoes: state.promotionCompetences,
       promocaoAntiga: promotions.old,
       promocaoNova: promotions.newer,
       conclusoesDeCiclo: state.cycleCompletionCompetences,
+      primeiraCompetenciaCloser: state.firstCloserCompetence,
+      competenciaRampingIgnorada: state.rampingIgnoredCompetence,
+      ultimaPromocao: lastPromotion,
+      proximaPromocaoAnterior: previousNextPromotion,
+      proximaPromocaoCorreta: correctNextPromotion,
+      rampingProjetado: projection?.rampingMetaCompetence ?? null,
+      metas3Projetadas: projection?.projectedMeta3Competences ?? [],
       motivos: reasons,
-      correcoesConfirmadasSimuladas: ["Miguel Carneiro Nunes", "Tatyanna Lima de Freitas", "João Paulo Maciel Sousa"]
-        .some((name) => normalizeName(profile.nome_colaborador) === normalizeName(name)),
       alteracaoPrevista: profile.progresso_meta3 !== state.meta3Streak
         || profile.progresso_meta2 !== state.meta2Count
         || profile.progresso_ciclo !== state.cycleProgress
         || profile.bonificacao_sdr !== bonusAfter
         || profile.streak_meta3_bonificacao !== bonusStreakAfter
         || profile.senioridade_atual !== state.seniorityAtPeriod,
-      metasDesdeJunho: correctedRows.filter((row) => row.competencia && row.competencia >= "2026-06-01")
-        .map((row) => `${row.competencia}:${compactGoal(row.meta_alcancada)}`),
+      historicoDesdeJunho: sourceRows.filter((row) => row.competencia && row.competencia >= "2026-06-01")
+        .map((row) => `${row.competencia}:${foldedPosition(row.posicao) || "?"}/${compactGoal(row.meta_alcancada)}[${row.meta_alcancada ?? "vazio"}]`),
     };
   });
-  const named = [
-    "Luan Nicolas Sinesio Crisostomo", "João Paulo Maciel Sousa", "Gustavo Duarte Pinheiro Silva",
-    "Leandro Dos Santos Pereira", "Miguel Carneiro Nunes", "Tatyanna Lima de Freitas",
-    "Adrilene Azevedo da Silva", "Luiz Fernando de Medeiros Paiva Moura", "Cleber Rodrigues Souza",
-    "Gabrielly de Oliveira Medeiros",
-  ].map((name) => {
+  const named = [...ACCEPTANCE_CASES].map(([name, expectedPromotion]) => {
       const comparison = comparisons.find((row) => normalizeName(row.nome) === normalizeName(name));
-      if (!comparison) return { nome: name, encontrado: false };
-      const profile = (profiles as Profile[]).find((item) => item.id === comparison.id) as Profile;
-      return { ...comparison,
-        historicoAtual: (byProfile.get(comparison.id) ?? []).map((row) => ({ competencia: row.competencia, posicao: row.posicao, meta: row.meta_alcancada, senioridade: row.senioridade, senioridadeInformada: row.senioridade_informada, promocao: row.recebeu_promocao })),
-        historicoAposCorrecoesConfirmadas: applyConfirmedCorrections(profile, byProfile.get(comparison.id) ?? []).map((row) => ({ competencia: row.competencia, posicao: row.posicao, meta: row.meta_alcancada, senioridade: row.senioridade, senioridadeInformada: row.senioridade_informada })),
-      };
+      if (!comparison) return { nome: name, encontrado: false, esperado: expectedPromotion, aceite: false };
+      const correctPromotion = comparison.promocoes.at(-1) ?? null;
+      const zeroedExpected = expectedPromotion === null;
+      return { ...comparison, esperado: expectedPromotion ?? "Zerado / sem meta",
+        promocaoMaterializadaCorreta: correctPromotion, aceite: zeroedExpected
+          ? correctPromotion === null && comparison.depois === 0
+          : comparison.proximaPromocaoCorreta === expectedPromotion };
     });
   const report = {
     mode: "dry-run-read-only", generatedAt: new Date().toISOString(), productionWrites: 0,
-    decisions: { miguelLastSdrCompetence: "2026-06-01", miguelFirstCloserCompetence: "2026-07-01", miguelJulyGoal: "Sem presença", miguelAugustGoal: "Sem presença", senior3ThirdMetaCompletesWithoutPromotion: true },
+    rule: { epoch: "2026-06-01", closerPromotion: "3 M3 consecutivas após ramping", closerMeta2: "quebra streak", closerBonus: false, sdrRuleChanged: false },
     summary: {
       profiles: profiles?.length ?? 0,
       results: results.length,
@@ -171,8 +185,14 @@ async function main() {
       projectedBonus30: comparisons.filter((row) => row.bonificacaoDepois === 30).length,
       projectedBonus40: comparisons.filter((row) => row.bonificacaoDepois === 40).length,
       projectedNearPromotion: comparisons.filter((row) => row.cicloDepois === 2).length,
+      acceptancePassed: named.filter((row) => row.aceite).length,
+      acceptanceTotal: ACCEPTANCE_CASES.size,
+      unexpectedSeniorityChanges: comparisons.filter((row) => row.senioridadeAntes !== row.senioridadeDepois).length,
+      gatePassed: named.every((row) => row.aceite)
+        && comparisons.every((row) => row.senioridadeAntes === row.senioridadeDepois)
+        && new Set(duplicateKeys).size === 0,
       referenceReplaySecondPassDifferences: (profiles as Profile[]).filter((profile) => {
-        const sourceRows = applyConfirmedCorrections(profile, byProfile.get(profile.id) ?? []);
+        const sourceRows = byProfile.get(profile.id) ?? [];
         return JSON.stringify(computeProgression(history(sourceRows), profile.senioridade_atual))
           !== JSON.stringify(computeProgression(history(sourceRows), profile.senioridade_atual));
       }).length,
@@ -183,7 +203,7 @@ async function main() {
     const impacted = comparisons.filter((row) => row.alteracaoPrevista).map((row) => ({
       colaborador: row.nome,
       posicao: row.posicaoAntes ?? "Não informada",
-      metas: row.metasDesdeJunho.join(" ") || "Sem resultados",
+      metas: row.historicoDesdeJunho.join(" ") || "Sem resultados",
       senioridadeAntes: row.senioridadeAntes ?? "Não informada",
       senioridadeDepois: row.senioridadeDepois ?? "Não informada",
       cicloAntes: `${row.antes} M3 (legado)`,
@@ -203,7 +223,7 @@ async function main() {
       ].filter(Boolean).join("; ") || "novo estado materializado",
     }));
     const sdrRows = (profiles as Profile[]).filter((profile) => foldedPosition(profile.posicao_atual) === "SDR").map((profile) => {
-      const sourceRows = applyConfirmedCorrections(profile, byProfile.get(profile.id) ?? []);
+      const sourceRows = byProfile.get(profile.id) ?? [];
       const state = computeProgression(history(sourceRows), profile.senioridade_atual);
       const byCompetence = new Map(sourceRows.map((row) => [row.competencia, compactGoal(row.meta_alcancada)]));
       return { colaborador: profile.nome_colaborador, jun: byCompetence.get("2026-06-01") ?? "—", jul: byCompetence.get("2026-07-01") ?? "—",

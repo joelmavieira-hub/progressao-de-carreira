@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   SENIORITIES, computeProgression, formatarCompetencia, formatarComposicaoCiclo,
   getCurrentPosition, getCurrentSquad, getNextSeniority, normalizeGoal, normalizeName,
-  normalizeSeniority, parseLegacyCompetence, processCareerGoal, recordsThrough,
+  normalizeSeniority, parseLegacyCompetence, processCareerGoal, projectNextCloserPromotion, recordsThrough,
   type CareerRuleState, type GoalLevel, type MonthRecord, type Seniority,
 } from "./progression";
 
@@ -28,11 +28,13 @@ describe("normalização e utilitários", () => {
     expect(normalizeGoal(" meta   3 ")).toBe("meta3");
     expect(normalizeGoal("Nenhuma Meta")).toBe("below");
     expect(normalizeGoal("Sem presença")).toBe("absent");
+    expect(normalizeGoal("Meta não definida")).toBe("absent");
     expect(normalizeGoal("Mega meta")).toBeNull();
     expect(normalizeName(" Gabriel   Barbosa ")).toBe("gabriel barbosa");
     expect(parseLegacyCompetence(" Abril ")).toBe("2026-04-01");
     expect(formatarCompetencia("2026-08-01")).toBe("Ago/2026");
     expect(formatarComposicaoCiclo(1, 1)).toBe("1 Meta 3 + 1 Meta 2");
+    expect(formatarComposicaoCiclo(1, 1, "Closer")).toBe("1 Meta 3");
   });
 });
 
@@ -112,6 +114,92 @@ describe("SDR para Closer", () => {
     expect(getCurrentSquad(rows, "2026-06-01")).toBe("Lobo");
     expect(getCurrentSquad(rows)).toBe("Águia");
     expect(recordsThrough(rows).map((row) => row.position)).toEqual(["SDR", "Closer"]);
+  });
+});
+
+describe("máquina exclusiva de Closer", () => {
+  const closerReplay = (goals: GoalLevel[]) => computeProgression([
+    record("2026-05-01", "meta3", "Closer"),
+    ...history(goals, "Closer"),
+  ], "Júnior 1");
+
+  it("promove somente com três Meta 3 consecutivas", () => {
+    expect(closerReplay(["meta3", "meta3", "meta3"])).toMatchObject({
+      seniorityAtPeriod: "Júnior 2", promotionCompetences: ["2026-08-01"],
+      meta3Streak: 0, meta2Count: 0, cycleProgress: 0,
+    });
+  });
+
+  it.each([
+    [["meta3", "meta2", "meta3"], 1],
+    [["meta3", "meta3", "meta2"], 0],
+    [["meta2", "meta3", "meta3"], 2],
+    [["meta3", "meta1", "meta3"], 1],
+  ] as Array<[GoalLevel[], number]>)('%j termina com %i Meta 3 consecutiva(s)', (goals, expected) => {
+    expect(closerReplay(goals)).toMatchObject({ meta3Streak: expected, meta2Count: 0, cycleProgress: expected });
+  });
+
+  it.each([
+    [["meta3", "absent", "meta3", "meta3"]],
+    [["meta3", "below", "meta3", "meta3"]],
+  ] as Array<[GoalLevel[]]>)('%j preserva a sequência nos vazios e promove', (goals) => {
+    expect(closerReplay(goals)).toMatchObject({ seniorityAtPeriod: "Júnior 2", promotionCompetences: ["2026-09-01"] });
+  });
+
+  it.each(["meta3", "meta2", "meta1"] as GoalLevel[])('ignora %s no primeiro mês como Closer', (goal) => {
+    expect(replay([goal], "Closer")).toMatchObject({
+      meta3Streak: 0, meta2Count: 0, cycleProgress: 0,
+      firstCloserCompetence: "2026-06-01", rampingIgnoredCompetence: "2026-06-01",
+    });
+  });
+
+  it("espera a primeira meta efetiva para consumir o ramping", () => {
+    expect(replay(["absent", "meta3"], "Closer")).toMatchObject({
+      meta3Streak: 0, closerRampingMetaConsumed: true, rampingIgnoredCompetence: "2026-07-01",
+    });
+    expect(replay(["absent", "below", "meta3"], "Closer")).toMatchObject({
+      meta3Streak: 0, closerRampingMetaConsumed: true, rampingIgnoredCompetence: "2026-08-01",
+    });
+  });
+
+  it("promove somente na terceira Meta 3 posterior ao ramping", () => {
+    const state = replay(["meta3", "meta3", "meta3", "meta3"], "Closer");
+    expect(state).toMatchObject({
+      seniorityAtPeriod: "Júnior 2", promotionCompetences: ["2026-09-01"], meta3Streak: 0,
+      rampingIgnoredCompetence: "2026-06-01",
+    });
+  });
+});
+
+describe("projeção de Closer separada do replay", () => {
+  const withConsumedRamping = (goals: GoalLevel[]) => [
+    record("2026-05-01", "meta3", "Closer"),
+    ...goals.map((goal, index) => record(month(index), goal, "Closer")),
+  ];
+
+  it("usa agosto vazio como primeiro slot quando há streak 1 em julho", () => {
+    const rows = withConsumedRamping(["absent", "meta3", "absent"]);
+    expect(computeProgression(rows)).toMatchObject({ meta3Streak: 1 });
+    expect(projectNextCloserPromotion(rows)).toEqual({
+      promotionCompetence: "2026-09-01",
+      projectedMeta3Competences: ["2026-08-01", "2026-09-01"],
+      rampingMetaCompetence: null,
+    });
+  });
+
+  it("projeta outubro com streak zero e agosto vazio", () => {
+    const rows = withConsumedRamping(["absent", "meta2", "absent"]);
+    expect(projectNextCloserPromotion(rows).promotionCompetence).toBe("2026-10-01");
+  });
+
+  it("consome o ramping em agosto e projeta três M3 válidas até novembro", () => {
+    const rows = history(["absent", "absent", "absent"], "Closer");
+    expect(computeProgression(rows)).toMatchObject({ closerRampingMetaConsumed: false, meta3Streak: 0 });
+    expect(projectNextCloserPromotion(rows)).toEqual({
+      promotionCompetence: "2026-11-01",
+      projectedMeta3Competences: ["2026-09-01", "2026-10-01", "2026-11-01"],
+      rampingMetaCompetence: "2026-08-01",
+    });
   });
 });
 

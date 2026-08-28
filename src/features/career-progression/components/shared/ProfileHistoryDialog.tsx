@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatarCompetencia, formatarComposicaoCiclo, formatarEtapaProgresso } from "@/lib/progression";
-import { formatarSquadAtual } from "../../domain";
+import { formatarSquadAtual, progressoDeSenioridade } from "../../domain";
 import type { PerfilComHistorico } from "../../types";
 
 export function ProfileHistoryDialog({ item, onClose }: { item: PerfilComHistorico | null; onClose: () => void }) {
@@ -10,8 +10,8 @@ export function ProfileHistoryDialog({ item, onClose }: { item: PerfilComHistori
     {item && <><DialogHeader><DialogTitle>{item.perfil.nome_colaborador}</DialogTitle>
       <DialogDescription>{item.perfil.ativo ? "Ativo" : "Inativo"} · {item.perfil.posicao_atual ?? "Posição não informada"} · {formatarSquadAtual(item.perfil.squad_atual)}</DialogDescription></DialogHeader>
       <div className="flex flex-wrap gap-2"><Badge variant="secondary">{item.perfil.senioridade_atual ?? "Senioridade não informada"}</Badge>
-        <Badge variant="outline">{formatarEtapaProgresso(item.perfil.progresso_ciclo ?? item.perfil.progresso_meta3)}</Badge>
-        <Badge variant="outline">{formatarComposicaoCiclo(item.perfil.progresso_meta3, item.perfil.progresso_meta2 ?? 0)}</Badge>
+        <Badge variant="outline">{formatarEtapaProgresso(progressoDeSenioridade(item.perfil))}</Badge>
+        <Badge variant="outline">{formatarComposicaoCiclo(item.perfil.progresso_meta3, item.perfil.progresso_meta2 ?? 0, item.perfil.posicao_atual)}</Badge>
         {item.perfil.posicao_atual?.trim().toLocaleLowerCase("pt-BR") === "sdr" && (item.perfil.bonificacao_sdr === 30 || item.perfil.bonificacao_sdr === 40) &&
           <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Bonificação: {item.perfil.bonificacao_sdr}%</Badge>}</div>
       {item.eventos.length > 0 && <section aria-label="Eventos de carreira" className="space-y-2"><h3 className="text-sm font-semibold">Eventos de carreira</h3>

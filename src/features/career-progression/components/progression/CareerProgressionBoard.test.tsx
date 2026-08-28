@@ -218,4 +218,22 @@ describe("CareerProgressionBoard", () => {
     expect(screen.getByText("SDR Zero").closest(".bg-white")).not.toHaveTextContent("Bonificação:");
     expect(screen.getByText("Closer Quarenta").closest(".bg-white")).not.toHaveTextContent("Bonificação:");
   });
+
+  it("usa somente o streak M3 do backend para composição e proximidade de Closer", () => {
+    const closer = {
+      ...profile("closer-streak", "Closer Streak", 1),
+      posicao_atual: "Closer",
+      progresso_meta3: 1,
+      progresso_meta2: 1,
+      progresso_ciclo: 2,
+    };
+    const resultados = [{ ...result("r-closer-streak", closer.id), posicao: "Closer" }];
+    render(<CareerProgressionBoard perfis={[closer]} resultados={resultados} perfisComHistorico={relacionarPerfisEResultados([closer], resultados)} />);
+
+    const card = screen.getByText("Closer Streak").closest(".bg-white");
+    expect(card).toHaveTextContent("1/3");
+    expect(card).toHaveTextContent("1 Meta 3");
+    expect(card).not.toHaveTextContent("Meta 2");
+    expect(card).not.toHaveTextContent("Próximo da promoção");
+  });
 });
