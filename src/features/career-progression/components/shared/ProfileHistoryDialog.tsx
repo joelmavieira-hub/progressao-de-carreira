@@ -4,21 +4,33 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatarCompetencia, formatarComposicaoCiclo, formatarEtapaProgresso } from "@/lib/progression";
 import { formatarSquadAtual, progressoDeSenioridade } from "../../domain";
 import type { PerfilComHistorico } from "../../types";
+import { detectRoleTransitionPromotions, isLeadershipPosition } from "../../domain/promotions";
 
 export function ProfileHistoryDialog({ item, onClose }: { item: PerfilComHistorico | null; onClose: () => void }) {
+  const leadership = item ? isLeadershipPosition(item.perfil.posicao_atual) : false;
+  const roleTransitions = item ? detectRoleTransitionPromotions([item]) : [];
   return <Dialog open={Boolean(item)} onOpenChange={(open) => { if (!open) onClose(); }}><DialogContent className="max-h-[88vh] max-w-5xl overflow-y-auto">
     {item && <><DialogHeader><DialogTitle>{item.perfil.nome_colaborador}</DialogTitle>
       <DialogDescription>{item.perfil.ativo ? "Ativo" : "Inativo"} · {item.perfil.posicao_atual ?? "Posição não informada"} · {formatarSquadAtual(item.perfil.squad_atual)}</DialogDescription></DialogHeader>
       <div className="flex flex-wrap gap-2"><Badge variant="secondary">{item.perfil.senioridade_atual ?? "Senioridade não informada"}</Badge>
+        {leadership ? <Badge variant="outline">Trilha comercial concluída · evolução de função</Badge> : <>
         <Badge variant="outline">{formatarEtapaProgresso(progressoDeSenioridade(item.perfil))}</Badge>
-        <Badge variant="outline">{formatarComposicaoCiclo(item.perfil.progresso_meta3, item.perfil.progresso_meta2 ?? 0, item.perfil.posicao_atual)}</Badge>
+        <Badge variant="outline">{formatarComposicaoCiclo(item.perfil.progresso_meta3, item.perfil.progresso_meta2 ?? 0, item.perfil.posicao_atual)}</Badge></>}
         {item.perfil.posicao_atual?.trim().toLocaleLowerCase("pt-BR") === "sdr" && (item.perfil.bonificacao_sdr === 30 || item.perfil.bonificacao_sdr === 40) &&
           <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Bonificação: {item.perfil.bonificacao_sdr}%</Badge>}</div>
       {item.eventos.length > 0 && <section aria-label="Eventos de carreira" className="space-y-2"><h3 className="text-sm font-semibold">Eventos de carreira</h3>
-        <div className="flex flex-wrap gap-2">{item.eventos.map((evento) => <Badge key={evento.id} variant="secondary">{formatarCompetencia(evento.competencia)} · {eventLabel(evento.event_type)}</Badge>)}</div></section>}
-      <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Competência</TableHead><TableHead>Meta</TableHead><TableHead>Senioridade histórica</TableHead><TableHead>Senioridade informada</TableHead><TableHead>Squad histórico</TableHead><TableHead>Posição histórica</TableHead><TableHead>Promoção</TableHead></TableRow></TableHeader>
+        <div className="flex flex-wrap gap-2">{item.eventos.map((evento) => {
+          const transition = evento.event_type === "role_promotion"
+            ? roleTransitions.find((candidate) => candidate.competence === evento.competencia)
+            : undefined;
+          const label = transition
+            ? `Promoção de função · ${transition.fromPosition} → ${transition.toPosition}`
+            : eventLabel(evento.event_type);
+          return <Badge key={evento.id} variant="secondary">{formatarCompetencia(evento.competencia)} · {label}</Badge>;
+        })}</div></section>}
+      <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Competência</TableHead><TableHead>Meta</TableHead><TableHead>Efeito na progressão</TableHead><TableHead>Senioridade histórica</TableHead><TableHead>Senioridade informada</TableHead><TableHead>Squad histórico</TableHead><TableHead>Posição histórica</TableHead><TableHead>Promoção</TableHead></TableRow></TableHeader>
         <TableBody>{item.resultados.map((row) => <TableRow key={row.id}><TableCell>{row.competencia ? formatarCompetencia(row.competencia) : "Não informada"}</TableCell>
-          <TableCell>{row.meta_alcancada ?? "Não informada"}</TableCell><TableCell>{row.senioridade ?? "Não informada"}</TableCell>
+          <TableCell>{row.meta_alcancada ?? "Não informada"}</TableCell><TableCell>{isLeadershipPosition(row.posicao) ? "Somente histórico" : "Regra comercial"}</TableCell><TableCell>{row.senioridade ?? "Não informada"}</TableCell>
           <TableCell>{row.senioridade_informada ?? "Não informada"}</TableCell><TableCell>{row.squad ?? "Não informado"}</TableCell>
           <TableCell>{row.posicao ?? "Não informada"}</TableCell><TableCell>{row.recebeu_promocao ? "Sim" : "Não"}</TableCell></TableRow>)}</TableBody>
       </Table></div></>}

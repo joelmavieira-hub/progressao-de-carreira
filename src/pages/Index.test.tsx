@@ -79,7 +79,7 @@ describe("Index", () => {
     expect(screen.getByText(/sem presença/)).toBeInTheDocument();
   });
 
-  it("monta a Progressão com quatro colunas calculadas e sem Atualizar", () => {
+  it("monta a Progressão com cinco colunas calculadas e sem Atualizar", () => {
     const { container } = renderAt("/progressao");
     expect(screen.getByRole("tab", { name: "Progressão" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("heading", { name: "0/3" })).toBeInTheDocument();
@@ -88,7 +88,7 @@ describe("Index", () => {
     expect(screen.getByRole("heading", { name: "Promovidos no período" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Pontos de atenção" })).not.toBeInTheDocument();
     expect(screen.queryByText("Em atenção")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(4);
+    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(5);
     expect(screen.queryByRole("button", { name: "Atualizar dados" })).not.toBeInTheDocument();
     expect(container.querySelector("[draggable='true']")).not.toBeInTheDocument();
   });

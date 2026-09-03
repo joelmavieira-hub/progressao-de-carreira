@@ -1,6 +1,6 @@
 import { isSquadSaiu, progressoDeSenioridade } from "../domain";
 import type { ColaboradorPerfil, ColaboradorResultado, PerfilComHistorico, ProfileStatusFilter } from "../types";
-import { detectRoleTransitionPromotions, type CareerPromotionType } from "./promotions";
+import { detectRoleTransitionPromotions, isLeadershipPosition, type CareerPromotionType } from "./promotions";
 
 export const SENIORITY_ORDER = [
   "Júnior 1", "Júnior 2", "Júnior 3", "Pleno 1", "Pleno 2", "Pleno 3", "Sênior 1", "Sênior 2", "Sênior 3",
@@ -442,10 +442,12 @@ export function findRecentPromotions(profiles: readonly PerfilComHistorico[], co
 }
 
 export function buildCycleColumns(profiles: readonly PerfilComHistorico[]) {
+  const cycleProfiles = profiles.filter(({ perfil }) =>
+    !isLeadershipPosition(perfil.posicao_atual));
   return {
-    meta1: profiles.filter(({ perfil }) => progressoDeSenioridade(perfil) === 0),
-    meta2: profiles.filter(({ perfil }) => progressoDeSenioridade(perfil) === 1),
-    meta3: profiles.filter(({ perfil }) => progressoDeSenioridade(perfil) === 2),
+    meta1: cycleProfiles.filter(({ perfil }) => progressoDeSenioridade(perfil) === 0),
+    meta2: cycleProfiles.filter(({ perfil }) => progressoDeSenioridade(perfil) === 1),
+    meta3: cycleProfiles.filter(({ perfil }) => progressoDeSenioridade(perfil) === 2),
   };
 }
 

@@ -9,7 +9,9 @@ import type {
 
 import {
   detectRoleTransitionPromotions,
+  isLeadershipPosition,
   isSdrToCloserTransition,
+  isSupportedRoleTransition,
 } from "./promotions";
 
 const profile = (
@@ -171,6 +173,33 @@ describe("role transition promotions", () => {
         { posicao: "Parcerias" },
       ),
     ).toBe(false);
+  });
+
+  it("reconhece as duas promoções terminais de liderança", () => {
+    expect(isSupportedRoleTransition(
+      { posicao: "SDR" },
+      { posicao: "Liderança de SDRs" },
+    )).toBe(true);
+    expect(isSupportedRoleTransition(
+      { posicao: "Closer" },
+      { posicao: "Liderança de Closers" },
+    )).toBe(true);
+    expect(isLeadershipPosition("lideranca de sdrs")).toBe(true);
+  });
+
+  it("expõe a transição SDR -> Liderança de SDRs no histórico", () => {
+    const data = related(
+      [profile("lider", { posicao_atual: "Liderança de SDRs" })],
+      [
+        result("lider-jul", "lider", "2026-07-01", { posicao: "SDR" }),
+        result("lider-ago", "lider", "2026-08-01", { posicao: "Liderança de SDRs" }),
+      ],
+    );
+    expect(detectRoleTransitionPromotions(data)[0]).toMatchObject({
+      competence: "2026-08-01",
+      fromPosition: "SDR",
+      toPosition: "Liderança de SDRs",
+    });
   });
 
   it("atribui a promoção à primeira competência como Closer", () => {

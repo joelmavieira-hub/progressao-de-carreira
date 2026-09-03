@@ -33,7 +33,8 @@ function normalizePosition(
 /**
  * Regra oficial de promoção de função:
  *
- * SDR -> Closer = promoção.
+ * SDR -> Closer, SDR -> Liderança de SDRs e
+ * Closer -> Liderança de Closers = promoção.
  *
  * Outras mudanças de posição não são consideradas promoção.
  */
@@ -45,6 +46,25 @@ export function isSdrToCloserTransition(
     normalizePosition(previous.posicao) === "sdr" &&
     normalizePosition(current.posicao) === "closer"
   );
+}
+
+export function isLeadershipPosition(
+  position: string | null | undefined,
+): boolean {
+  const normalized = normalizePosition(position);
+  return normalized === "lideranca de sdrs" ||
+    normalized === "lideranca de closers";
+}
+
+export function isSupportedRoleTransition(
+  previous: Pick<ColaboradorResultado, "posicao">,
+  current: Pick<ColaboradorResultado, "posicao">,
+): boolean {
+  const from = normalizePosition(previous.posicao);
+  const to = normalizePosition(current.posicao);
+  return (from === "sdr" && to === "closer") ||
+    (from === "sdr" && to === "lideranca de sdrs") ||
+    (from === "closer" && to === "lideranca de closers");
 }
 
 function compareResults(
@@ -80,7 +100,7 @@ export function detectRoleTransitionPromotions(
       const previousResult = history[index - 1];
       const result = history[index];
 
-      if (!isSdrToCloserTransition(previousResult, result)) {
+      if (!isSupportedRoleTransition(previousResult, result)) {
         continue;
       }
 

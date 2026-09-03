@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CareerDashboard } from "@/features/career-progression/components/dashboard/CareerDashboard";
 import { CareerProgressionBoard } from "@/features/career-progression/components/progression/CareerProgressionBoard";
 import { useCareerProgressionData } from "@/features/career-progression/hooks/useCareerProgressionData";
+import { isLeadershipPosition } from "@/features/career-progression/domain/promotions";
 
 const Index = () => {
   const location = useLocation();
@@ -43,12 +44,19 @@ const Index = () => {
     perfisOperacionais,
     resultadosOperacionais,
     perfisOperacionaisComHistorico,
+    perfisComHistorico,
     isLoading,
     isFetching,
     error,
     refetch,
     lastUpdatedAt,
   } = useCareerProgressionData();
+
+  const progressionHistory = perfisComHistorico.filter(({ perfil }) =>
+    isLeadershipPosition(perfil.posicao_atual) ||
+    perfisOperacionais.some((operational) => operational.id === perfil.id));
+  const progressionProfiles = progressionHistory.map(({ perfil }) => perfil);
+  const progressionResults = progressionHistory.flatMap(({ resultados: history }) => history);
 
   const navigateToProgression = (
     focus?: "meta3" | "promoted",
@@ -168,11 +176,9 @@ const Index = () => {
                   aria-labelledby="tab-progression"
                 >
                   <CareerProgressionBoard
-                    perfis={perfisOperacionais}
-                    resultados={resultadosOperacionais}
-                    perfisComHistorico={
-                      perfisOperacionaisComHistorico
-                    }
+                    perfis={progressionProfiles}
+                    resultados={progressionResults}
+                    perfisComHistorico={progressionHistory}
                     focus={locationState?.focus}
                   />
                 </section>
