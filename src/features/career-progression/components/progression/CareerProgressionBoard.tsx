@@ -89,42 +89,19 @@ export function CareerProgressionBoard({ perfis, resultados, perfisComHistorico,
     [cycleProfiles],
   );
 
-  const terminalProfiles = useMemo(
-    () => filtered.filter(({ perfil }) =>
-      isLeadershipPosition(perfil.posicao_atual) &&
-      !promotedIds.has(perfil.id)),
-    [filtered, promotedIds],
-  );
-
   return <div className="space-y-5" data-testid="career-progression-board">
     <CareerFiltersBar filters={filters} competences={[...competences].reverse()} options={options} onChange={setFilters} onClear={() => setFilters(defaults(latest))} showSearch />
     <OperationalSummary promoted={countUniqueCareerPromoted(promotions)} promotionRecords={promotions.length} near={columns.meta3.length} monitored={filtered.length} />
     {filtered.length === 0 ? <div role="status" className="rounded-2xl border border-dashed bg-card p-10 text-center"><p className="font-semibold">Nenhum colaborador corresponde aos filtros.</p>
       <Button variant="outline" className="mt-4" onClick={() => setFilters(defaults(latest))}>Limpar filtros</Button></div> :
-      <div ref={boardRef} className="mx-auto w-full pb-3" aria-label="Quadro de progressão"><div data-testid="progression-columns" className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div ref={boardRef} className="mx-auto w-full pb-3" aria-label="Quadro de progressão"><div data-testid="progression-columns" className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <CycleColumn title="0/3" description="Ciclo iniciado em junho/2026" items={columns.meta1} progress={0} competence={filters.competence} onOpen={setSelected} />
         <CycleColumn title="1/3" description="Um resultado válido no ciclo" items={columns.meta2} progress={1} competence={filters.competence} onOpen={setSelected} />
         <CycleColumn title="2/3" description="A um resultado válido da promoção" items={columns.meta3} progress={2} competence={filters.competence} onOpen={setSelected} dataColumn="meta3" />
         <PromotionColumn items={promotions} onOpen={setSelected} />
-        <LeadershipColumn items={terminalProfiles} competence={filters.competence} onOpen={setSelected} />
       </div></div>}
     <ProfileHistoryDialog item={selected} onClose={() => setSelected(null)} />
   </div>;
-}
-
-function LeadershipColumn({ items, competence, onOpen }: { items: PerfilComHistorico[]; competence: string; onOpen: (item: PerfilComHistorico) => void }) {
-  return <ColumnShell title="Trilha concluída" description="Evolução para liderança" count={items.length} tone="bg-slate-100" dataColumn="leadership">
-    {items.map((item) => {
-      const result = item.resultados.find((row) => row.competencia === competence);
-      return <PersonCard key={item.perfil.id} item={item} onOpen={onOpen}>
-        <div className="flex flex-wrap gap-1.5"><Badge variant={item.perfil.ativo ? "secondary" : "outline"}>{item.perfil.ativo ? "Ativo" : "Inativo"}</Badge>
-          <Badge className="bg-slate-200 text-slate-800 hover:bg-slate-200"><CheckCircle2 aria-hidden="true" className="mr-1 h-3.5 w-3.5" />Evolução de função</Badge></div>
-        <p className="text-xs font-medium">{item.perfil.posicao_atual}</p>
-        <p className="text-xs text-muted-foreground">Trilha comercial encerrada · resultados somente históricos</p>
-        <p className="text-xs"><span className="text-muted-foreground">{competence ? formatarCompetencia(competence) : "Competência"}:</span> {result?.meta_alcancada ?? "Sem resultado"}</p>
-      </PersonCard>;
-    })}
-  </ColumnShell>;
 }
 
 function OperationalSummary({ promoted, promotionRecords, near, monitored }: { promoted: number; promotionRecords: number; near: number; monitored: number }) {

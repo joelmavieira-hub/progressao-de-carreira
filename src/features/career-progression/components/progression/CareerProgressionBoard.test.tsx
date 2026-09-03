@@ -33,18 +33,18 @@ describe("CareerProgressionBoard", () => {
     expect(container.querySelector("[draggable='true']")).toBeNull();
   });
 
-  it("renderiza cinco colunas responsivas e três indicadores operacionais", () => {
+  it("renderiza quatro colunas responsivas e três indicadores operacionais", () => {
     const perfis = [profile("1", "Ana", 0), profile("2", "Bia", 1), profile("3", "Carla", 2)];
     const resultados = [result("r1", "1", true), result("r2", "2"), result("r3", "3")];
     const { container } = render(<CareerProgressionBoard perfis={perfis} resultados={resultados} perfisComHistorico={relacionarPerfisEResultados(perfis, resultados)} />);
     const columns = screen.getByTestId("progression-columns");
-    expect(columns.children).toHaveLength(5);
-    expect(columns).toHaveClass("grid-cols-1", "md:grid-cols-2", "xl:grid-cols-5");
+    expect(columns.children).toHaveLength(4);
+    expect(columns).toHaveClass("grid-cols-1", "md:grid-cols-2", "xl:grid-cols-4");
     expect(screen.getByRole("heading", { name: "0/3" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "1/3" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "2/3" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Promovidos no período" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Trilha concluída" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Trilha concluída" })).not.toBeInTheDocument();
     expect(screen.queryByText("Pontos de atenção")).not.toBeInTheDocument();
     expect(screen.queryByText("Em atenção")).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Resumo operacional" }).children).toHaveLength(3);
@@ -201,29 +201,6 @@ describe("CareerProgressionBoard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ver histórico" }));
     expect(screen.getAllByText("Urso")).toHaveLength(2);
     expect(screen.getByText("Gorila")).toBeInTheDocument();
-  });
-  it("mantém liderança fora de 0/3, 1/3 e 2/3", () => {
-    const leader = {
-      ...profile("lider", "Marcos Líder", 0),
-      posicao_atual: "Liderança de SDRs",
-      progresso_ciclo: 0,
-      bonificacao_sdr: 40,
-      streak_meta3_bonificacao: 0,
-    };
-    const julho = { ...result("lider-jul", "lider"), competencia: "2026-07-01", mes_referencia: "2026-07", posicao: "SDR" };
-    const agosto = { ...result("lider-ago", "lider"), posicao: "Liderança de SDRs" };
-    const setembro = { ...result("lider-set", "lider"), competencia: "2026-09-01", mes_referencia: "2026-09", posicao: "Liderança de SDRs", meta_alcancada: "Meta 2" };
-    const event: CareerProgressionEvent = { id: "event-lider", colaborador_id: "lider", competencia: "2026-08-01", event_type: "role_promotion", senioridade: "Júnior 1", recebeu_promocao: false, created_at: "2026-08-01T00:00:00Z" };
-    const results = [julho, agosto, setembro];
-    render(<CareerProgressionBoard perfis={[leader]} resultados={results} perfisComHistorico={relacionarPerfisEResultados([leader], results, [event])} />);
-    const terminal = screen.getByRole("heading", { name: "Trilha concluída" }).closest("section");
-    expect(terminal).toHaveTextContent("Marcos Líder");
-    expect(terminal).toHaveTextContent("Evolução de função");
-    expect(terminal).not.toHaveTextContent("0/3");
-    expect(terminal).not.toHaveTextContent("Bonificação:");
-    fireEvent.click(screen.getByRole("button", { name: "Ver histórico" }));
-    expect(screen.getByText(/Promoção de função · SDR → Liderança de SDRs/)).toBeInTheDocument();
-    expect(screen.getAllByText("Somente histórico")).toHaveLength(2);
   });
   it("renderiza bonificação roxa somente para SDR com 30% ou 40% e preserva os demais badges", () => {
     const sdr40 = { ...profile("sdr40", "SDR Quarenta", 2), progresso_ciclo: 2, progresso_meta2: 1, progresso_meta3: 1, bonificacao_sdr: 40 };
