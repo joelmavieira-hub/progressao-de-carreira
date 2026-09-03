@@ -13,6 +13,7 @@ import type { ColaboradorPerfil, ColaboradorResultado, PerfilComHistorico } from
 import { formatarCompetencia, formatarComposicaoCiclo, formatarEtapaProgresso } from "@/lib/progression";
 import { CareerFiltersBar } from "../shared/CareerFiltersBar";
 import { ProfileHistoryDialog } from "../shared/ProfileHistoryDialog";
+import { SdrBonusBadge } from "../shared/SdrBonusBadge";
 import { isLeadershipPosition } from "../../domain/promotions";
 
 const defaults = (competence: string): AnalyticsFilters => ({ competence, status: "ativos", squad: "todos", position: "todos", seniority: "todos", search: "" });
@@ -147,8 +148,7 @@ function CycleColumn({ title, description, items, progress, competence, onOpen, 
     const result = item.resultados.find((row) => row.competencia === competence);
     return <PersonCard key={item.perfil.id} item={item} onOpen={onOpen}><div className="flex flex-wrap gap-1.5"><Badge variant={item.perfil.ativo ? "secondary" : "outline"}>{item.perfil.ativo ? "Ativo" : "Inativo"}</Badge>
       {progress === 2 && <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Próximo da promoção</Badge>}
-      {item.perfil.posicao_atual?.trim().toLocaleLowerCase("pt-BR") === "sdr" && (item.perfil.bonificacao_sdr === 30 || item.perfil.bonificacao_sdr === 40) &&
-        <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Bonificação: {item.perfil.bonificacao_sdr}%</Badge>}</div>
+      <SdrBonusBadge profile={item.perfil} /></div>
       <p className="text-xs text-muted-foreground">{squadForCompetence(item, competence) ? formatarSquadAtual(squadForCompetence(item, competence)!) : "Squad não informado"} · {item.perfil.posicao_atual ?? "Posição não informada"}</p>
       <p className="text-xs text-muted-foreground">{item.perfil.senioridade_atual ?? "Senioridade não informada"} · {formatarEtapaProgresso(progress)}</p>
       <p className="text-xs text-muted-foreground">{formatarComposicaoCiclo(item.perfil.progresso_meta3, item.perfil.progresso_meta2 ?? 0, item.perfil.posicao_atual)}</p>
@@ -189,6 +189,7 @@ function PromotionColumn({ items, onOpen }: { items: PromotionView[]; onOpen: (i
         onOpen={onOpen}
         accent="green"
       >
+        <SdrBonusBadge profile={profile.perfil} />
         <p className="text-xs text-muted-foreground">
           {result.squad
             ? formatarSquadAtual(result.squad)

@@ -5,6 +5,7 @@ import { formatarCompetencia, formatarComposicaoCiclo, formatarEtapaProgresso } 
 import { formatarSquadAtual, progressoDeSenioridade } from "../../domain";
 import type { PerfilComHistorico } from "../../types";
 import { detectRoleTransitionPromotions, isLeadershipPosition } from "../../domain/promotions";
+import { SdrBonusBadge } from "./SdrBonusBadge";
 
 export function ProfileHistoryDialog({ item, onClose }: { item: PerfilComHistorico | null; onClose: () => void }) {
   const leadership = item ? isLeadershipPosition(item.perfil.posicao_atual) : false;
@@ -16,8 +17,7 @@ export function ProfileHistoryDialog({ item, onClose }: { item: PerfilComHistori
         {leadership ? <Badge variant="outline">Trilha comercial concluída · evolução de função</Badge> : <>
         <Badge variant="outline">{formatarEtapaProgresso(progressoDeSenioridade(item.perfil))}</Badge>
         <Badge variant="outline">{formatarComposicaoCiclo(item.perfil.progresso_meta3, item.perfil.progresso_meta2 ?? 0, item.perfil.posicao_atual)}</Badge></>}
-        {item.perfil.posicao_atual?.trim().toLocaleLowerCase("pt-BR") === "sdr" && (item.perfil.bonificacao_sdr === 30 || item.perfil.bonificacao_sdr === 40) &&
-          <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Bonificação: {item.perfil.bonificacao_sdr}%</Badge>}</div>
+        <SdrBonusBadge profile={item.perfil} /></div>
       {item.eventos.length > 0 && <section aria-label="Eventos de carreira" className="space-y-2"><h3 className="text-sm font-semibold">Eventos de carreira</h3>
         <div className="flex flex-wrap gap-2">{item.eventos.map((evento) => {
           const transition = evento.event_type === "role_promotion"

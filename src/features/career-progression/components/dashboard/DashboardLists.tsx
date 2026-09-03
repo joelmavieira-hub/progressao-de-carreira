@@ -6,6 +6,7 @@ import { formatarCompetencia, formatarEtapaProgresso } from "@/lib/progression";
 import { formatarSquadAtual } from "../../domain";
 import { squadForCompetence, type PromotionView } from "../../domain/analytics";
 import type { PerfilComHistorico } from "../../types";
+import { SdrBonusBadge } from "../shared/SdrBonusBadge";
 
 export function DashboardLists({ nearPromotion, recentPromotions, competence, onOpen, onNavigate }: {
   nearPromotion: PerfilComHistorico[];
@@ -57,10 +58,9 @@ function ListCard({ title, icon: Icon, action, testId, children }: { title: stri
 }
 
 function ProfileRow({ item, detail, badge, onOpen }: { item: PerfilComHistorico; detail: string; badge: string; onOpen: (item: PerfilComHistorico) => void }) {
-  const bonus = item.perfil.posicao_atual?.trim().toLocaleLowerCase("pt-BR") === "sdr" ? item.perfil.bonificacao_sdr : 0;
   return <div className="flex items-start justify-between gap-3 p-4"><div className="min-w-0"><p className="truncate text-sm font-semibold">{item.perfil.nome_colaborador}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p>
     <Button variant="link" className="h-auto p-0 pt-2 text-xs" onClick={() => onOpen(item)}>Ver histórico</Button></div><div className="flex max-w-36 flex-wrap justify-end gap-1.5"><Badge variant="secondary" className="whitespace-normal text-center">{badge}</Badge>
-      {(bonus === 30 || bonus === 40) && <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Bonificação: {bonus}%</Badge>}</div></div>;
+      <SdrBonusBadge profile={item.perfil} /></div></div>;
 }
 
 function Empty() { return <div role="status" className="p-6 text-center text-sm text-muted-foreground">Nenhum registro para os filtros selecionados.</div>; }

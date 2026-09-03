@@ -207,7 +207,7 @@ describe("CareerProgressionBoard", () => {
       ...profile("lider", "Marcos Líder", 0),
       posicao_atual: "Liderança de SDRs",
       progresso_ciclo: 0,
-      bonificacao_sdr: 0,
+      bonificacao_sdr: 40,
       streak_meta3_bonificacao: 0,
     };
     const julho = { ...result("lider-jul", "lider"), competencia: "2026-07-01", mes_referencia: "2026-07", posicao: "SDR" };
@@ -231,14 +231,16 @@ describe("CareerProgressionBoard", () => {
     const sdr0 = { ...profile("sdr0", "SDR Zero", 0), progresso_ciclo: 0, bonificacao_sdr: 0 };
     const closer = { ...profile("closer", "Closer Quarenta", 0), posicao_atual: "Closer", progresso_ciclo: 0, bonificacao_sdr: 40 };
     const perfis = [sdr40, sdr30, sdr0, closer];
-    const resultados = perfis.map((item) => ({ ...result(`r-${item.id}`, item.id), posicao: item.posicao_atual }));
+    const resultados = perfis.map((item) => ({ ...result(`r-${item.id}`, item.id, item.id === "sdr40"), posicao: item.posicao_atual }));
     render(<CareerProgressionBoard perfis={perfis} resultados={resultados} perfisComHistorico={relacionarPerfisEResultados(perfis, resultados)} />);
 
     const badge40 = screen.getByText("Bonificação: 40%");
     const badge30 = screen.getByText("Bonificação: 30%");
+    const promotedColumn = screen.getByRole("heading", { name: "Promovidos no período" }).closest("section");
     expect(badge40).toHaveClass("bg-purple-100", "text-purple-800");
     expect(badge30).toHaveClass("bg-purple-100", "text-purple-800");
-    expect(screen.getByText("SDR Quarenta").closest(".bg-white")).toHaveTextContent("AtivoPróximo da promoçãoBonificação: 40%");
+    expect(promotedColumn).toHaveTextContent("SDR Quarenta");
+    expect(promotedColumn).toHaveTextContent("Bonificação: 40%");
     expect(screen.getByText("SDR Zero").closest(".bg-white")).not.toHaveTextContent("Bonificação:");
     expect(screen.getByText("Closer Quarenta").closest(".bg-white")).not.toHaveTextContent("Bonificação:");
   });
